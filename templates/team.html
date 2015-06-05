@@ -1,0 +1,195 @@
+<!DOCTYPE html>
+<html lang="zh">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="">
+    <meta name="author" content="">
+    <title></title>
+    <link rel="shortcut icon" href="">
+    <link rel="stylesheet" href="/css/bootplus.min.css">
+    <link rel="stylesheet" href="/css/bootplus-responsive.min.css">
+    <link rel="stylesheet" href="/css/font-awesome.min.css">
+    <link rel="stylesheet" href="/css/bootstrap-datetimepicker.min.css">
+    <link rel="stylesheet" href="/css/new.css">
+    <!--[if IE]>
+        <script src="https://cdn.jsdelivr.net/html5shiv/3.7.2/html5shiv.min.js"></script>
+        <script src="https://cdn.jsdelivr.net/respond/1.4.2/respond.min.js"></script>
+    <![endif]-->
+</head>
+
+<body>
+    <div class="navbar navbar-fixed-top">
+        <div class="navbar-inner">
+            <div class="container">
+                <button type="button" class="btn btn-navbar" data-toggle="collapse" data-target=".nav-collapse">
+                    <span class="icon-bar"></span>
+                    <span class="icon-bar"></span>
+                    <span class="icon-bar"></span>
+                </button>
+                <a class="brand" href="http://www.sembpc.com">“学院杯”大学生创意创业大赛</a>
+                <div class="nav-collapse collapse">
+                    <ul class="nav pull-right">
+                        <li class="">
+                            <a href="http://www.sembpc.com">网站首页</a>
+                        </li>
+                        <li class="pull-right">
+                            <a href="/logout">退出</a>
+                        </li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="container">
+        <div class="row">
+            <div class="span3 bs-docs-sidenav">
+                <ul class="nav nav-list bs-docs-sidenav affix">
+
+                    {{range .Menu}}
+                    <li><a href="{{.Name}}">{{.Title}}</a>
+                    </li>
+                    {{end}}
+                </ul>
+            </div>
+            <div class="span9">
+                <section>
+                    <p class="page-header">“学院杯”大学生创意创业大赛团队报名表</p>
+                    <ul id="tabs" class="nav nav-tabs" data-tabs="tabs">
+                        <li class="active"><a href="#consign" data-toggle="tab">待审核</a>
+                        </li>
+                        <li><a href="#serviceid" data-toggle="tab">已审核</a>
+                        </li>
+                    </ul>
+                    <div id="my-tab-content" class="tab-content">
+                        <div class="tab-pane active" id="consign">
+                            <table class="table table-hover">
+                                <thead>
+                                    <tr>
+                                        <th>学校</th>
+                                        <th>组别</th>
+                                        <th>组长</th>
+                                        <th>副组长</th>
+                                        <th>日期</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {{range .TeamUnpass}}
+                                        <tr>
+                                            <td>{{.University}}</td>
+                                            <td>{{.Level}}</td>
+                                            <td>{{.Leader}}</td>
+                                            <td>{{.Pm}}</td>
+                                            <td>{{.Logtime}}</td>
+                                            <td><button class="btn btn-primary pull-right" name="check" value="{{.Id}}">审核</button></td>
+                                            <td><button class="btn btn-primary pull-right" name="delete" value="{{.Id}}">删除</button></td>
+                                            
+                                        </tr>
+                                    {{end}}                                   
+
+                                </tbody>
+                            </table>
+                        </div>
+                        <div class="tab-pane" id="serviceid">
+                            <table class="table table-hover">
+                                <thead>
+                                    <tr>
+                                        <th>学校</th>
+                                        <th>组别</th>
+                                        <th>组长</th>
+                                        <th>副组长</th>
+                                        <th>日期</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {{range .TeamPass}}
+                                        <tr>
+                                            <td>{{.University}}</td>
+                                            <td>{{.Level}}</td>
+                                            <td>{{.Leader}}</td>
+                                            <td>{{.Pm}}</td>
+                                            <td>{{.Logtime}}</td>
+                                            <td><button class="btn btn-primary pull-right" name="check" value="{{.Id}}">审核</button></td>
+                                            <td><button class="btn btn-primary pull-right" name="delete" value="{{.Id}}">删除</button></td>
+                                        </tr>
+                                    {{end}}
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </section>
+            </div>
+        </div>
+        <!-- Modal -->
+        <div id="myModal" class="modal hide fade" tabindex="-1" role="dialog" aria-labelledby="myModalLabel" aria-hidden="true">
+            <div class="modal-header">
+                <button type="button" class="close" data-dismiss="modal" aria-hidden="true">×</button>
+                <h3 id="myModalLabel">审核报名信息</h3>
+            </div>
+            <div class="modal-body">
+               <input type="hidden" id="id">
+                <label class="input-block-level">
+                    学校
+                    <input type="text" class="input-xxlarge" id="university">
+                </label>
+                <label class="input-block-level">
+                    组别
+                    <input type="text" id="level">
+                </label>
+                <label class="input-block-level">
+                    组长
+                    <input type="text" id="leader"> 性别
+                    <input type="text" class="input-mini" id="leader_gender"> 联系方式
+                    <input type="text" class="input-small" id="leader_contact">
+                </label>
+                <label class="input-block-level">
+                    副组长
+                    <input type="text" id="pm"> 性别
+                    <input type="text" class="input-mini" id="pm_gender"> 联系方式
+                    <input type="text" class="input-small" id="pm_contact">
+                </label>
+                <label>队伍主题</label>
+                <textarea rows="15" class="input-xxlarge" id="topic"></textarea>
+                <label>项目简介</label>
+                <textarea rows="15" class="input-xxlarge" id="intro"></textarea>
+            </div>
+            <div class="modal-footer">
+                <button class="btn" data-dismiss="modal" aria-hidden="true" id="checked">通过</button>
+                <button class="btn" data-dismiss="modal" aria-hidden="true" id="delete">删除</button>
+                <button class="btn" data-dismiss="modal" aria-hidden="true">关闭</button>                
+            </div>
+        </div>
+        <div id="updateModal" class="modal hide fade" tabindex="-1" role="dialog" aria-labelledby="updateModalLabel" aria-hidden="true">
+            <div class="modal-header">
+                <button type="button" class="close" data-dismiss="modal" aria-hidden="true">×</button>
+                <h3 id="updateModalLabel">审核报名信息</h3>
+            </div>
+            <div class="modal-body">
+               <p></p>
+            </div>
+            <div class="modal-footer">
+                <button class="btn" data-dismiss="modal" aria-hidden="true">关闭</button>                
+            </div>
+        </div>
+        <div id="deleteModal" class="modal hide fade" tabindex="-1" role="dialog" aria-labelledby="updateModalLabel" aria-hidden="true">
+            <div class="modal-header">
+                <button type="button" class="close" data-dismiss="modal" aria-hidden="true">×</button>
+                <h3 id="deleteModalLabel">删除报名信息</h3>
+            </div>
+            <div class="modal-body">
+               <p></p>
+            </div>
+            <div class="modal-footer">
+                <button class="btn" data-dismiss="modal" aria-hidden="true">关闭</button>                
+            </div>
+        </div>                  
+    </div>
+    <script src="/js/jquery-1.8.3.min.js"></script>
+    <script src="/js/bootstrap.min.js"></script>
+    <script src="/js/bootstrap-datetimepicker.min.js"></script>
+    <script src="/js/locales/bootstrap-datetimepicker.zh-CN.js" charset="UTF-8"></script>
+    <script src="/js/team.js"></script>
+</body>
+
+</html>

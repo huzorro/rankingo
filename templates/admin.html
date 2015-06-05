@@ -1,0 +1,177 @@
+<!DOCTYPE html>
+<html lang="zh">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="">
+    <meta name="author" content="">
+    <title></title>
+    <link rel="shortcut icon" href="">
+    <link rel="stylesheet" href="css/bootplus.min.css">
+    <link rel="stylesheet" href="css/bootplus-responsive.min.css">
+    <link rel="stylesheet" href="css/bootstrap-datetimepicker.min.css">
+    <link rel="stylesheet" href="css/new.css">
+    <!--[if IE]>
+        <script src="https://cdn.jsdelivr.net/html5shiv/3.7.2/html5shiv.min.js"></script>
+        <script src="https://cdn.jsdelivr.net/respond/1.4.2/respond.min.js"></script>
+    <![endif]-->
+</head>
+
+<body>
+    <div class="navbar navbar-fixed-top">
+        <div class="navbar-inner">
+            <div class="container">
+                <button type="button" class="btn btn-navbar" data-toggle="collapse" data-target=".nav-collapse">
+                    <span class="icon-bar"></span>
+                    <span class="icon-bar"></span>
+                    <span class="icon-bar"></span>
+                </button>
+                <a class="brand" href="#">统计</a>
+                <div class="nav-collapse collapse">
+                    <ul class="nav pull-right">
+                        <li class="">
+                            <a href="/">首页</a>
+                        </li>
+                        <li class="pull-right">
+                            <a href="/logout">退出</a>
+                        </li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="container">
+        <div class="row">
+            <div class="span3 bs-docs-sidenav">
+                <ul class="nav nav-list bs-docs-sidenav affix">
+                {{range .}}
+                    <li><a href="{{.Name}}">{{.Title}}</a></li>
+                {{end}}
+                </ul>
+            </div>
+            <div class="span9">
+
+                <section>
+                    <div class="form-inline" id="final_stat_form">
+                        <label for="start_datetime" class=>开始时间
+                            <input size="16" type="text" value="" id="start_datetime" name="start_datetime" readonly>
+                        </label>
+                        <label for="start_datetime">结束时间
+                            <input size="16" type="text" value="" id="end_datetime" name="end_datetime" readonly>
+                        </label>
+<!--                        <input type="submit" value="查询" class="btn btn-primary" id="search">-->
+                        <button class="btn btn-primary" id="search">查询</button>
+                    </div>
+                </section>
+                <section>
+                    <p class="page-header">按运营商统计</p>
+                            <table class="table table-hover" id="spnum">
+                                <thead>
+                                    <tr>
+                                        <th>ids</th>
+                                        <th>名称</th>
+                                        <th>上行条数</th>
+                                        <th>上行用户数</th>
+                                        <th>下行成功条数</th>
+                                        <th>下行成功用户数</th>
+                                        <th>成功计费金额</th>
+                                        <th>#</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    
+                                </tbody>
+                            </table>                    
+                </section>
+                <section>
+                   <p class="page-header">统计明细</p>
+                    <ul id="tabs" class="nav nav-tabs" data-tabs="tabs">
+                        <li class="active"><a href="#consign" data-toggle="tab">合作方</a>
+                        </li>
+                        <li><a href="#serviceid" data-toggle="tab">业务代码</a>
+                        </li>
+                        <li><a href="#province" data-toggle="tab">地区分布</a>
+                        </li>
+                    </ul>
+                    <div id="my-tab-content" class="tab-content">
+                        <div class="tab-pane active" id="consign">
+                            <table class="table table-hover">
+                                <thead>
+                                    <tr>
+                                        <th>ids</th>
+                                        <th>名称</th>
+                                        <th>上行条数</th>
+                                        <th>上行用户数</th>
+                                        <th>下行成功条数</th>
+                                        <th>下行成功用户数</th>
+                                        <th>成功计费金额</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    
+                                </tbody>
+                            </table>
+                        </div>
+                        <div class="tab-pane" id="serviceid">
+                            <table class="table table-hover">
+                                <thead>
+                                    <tr>
+                                        <th>ids</th>
+                                        <th>名称</th>
+                                        <th>上行条数</th>
+                                        <th>上行用户数</th>
+                                        <th>下行成功条数</th>
+                                        <th>下行成功用户数</th>
+                                        <th>成功计费金额</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    
+                                </tbody>
+                            </table>
+                        </div>
+                        <div class="tab-pane" id="province">
+                            <table class="table table-hover">
+                                <thead>
+                                    <tr>
+                                        <th>ids</th>
+                                        <th>名称</th>
+                                        <th>上行条数</th>
+                                        <th>上行用户数</th>
+                                        <th>下行成功条数</th>
+                                        <th>下行成功用户数</th>
+                                        <th>成功计费金额</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </section>
+            </div>
+        </div>
+<!-- Modal -->
+<div id="myModal" class="modal hide fade" tabindex="-1" role="dialog" aria-labelledby="myModalLabel" aria-hidden="true">
+  <div class="modal-header">
+    <button type="button" class="close" data-dismiss="modal" aria-hidden="true">×</button>
+    <h3 id="myModalLabel">提示信息</h3>
+  </div>
+  <div class="modal-body">
+    <p></p>
+  </div>
+  <div class="modal-footer">
+    <button class="btn" data-dismiss="modal" aria-hidden="true">Close</button>
+  </div>
+</div>        
+    </div>
+    <script src="js/jquery-1.8.3.min.js"></script>
+    <script src="js/bootstrap.min.js"></script>
+    <script src="js/bootstrap-datetimepicker.min.js"></script>
+    <script src="js/locales/bootstrap-datetimepicker.zh-CN.js" charset="UTF-8"></script>
+    <script src="js/admin.js"></script>    
+</body>
+
+</html>
