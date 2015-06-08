@@ -372,7 +372,8 @@ func keyUpdateAction(r *http.Request, w http.ResponseWriter, db *sql.DB, log *lo
 	return http.StatusOK, string(js)
 }
 
-func keyAddAction(r *http.Request, w http.ResponseWriter, db *sql.DB, log *log.Logger, redisPool *sexredis.RedisPool, cfg *Cfg, session sessions.Session) (int, string) {
+func keyAddAction(r *http.Request, w http.ResponseWriter, db *sql.DB, log *log.Logger,
+	redisPool *sexredis.RedisPool, cfg *Cfg, session sessions.Session) (int, string) {
 	var (
 		key  KeyMsg
 		user SpStatUser
@@ -480,4 +481,14 @@ func keyAddAction(r *http.Request, w http.ResponseWriter, db *sql.DB, log *log.L
 	}
 	js, _ = json.Marshal(Status{"200", "操作成功"})
 	return http.StatusOK, string(js)
+}
+
+func taskOneApi(r *http.Request, w http.ResponseWriter, db *sql.DB, log *log.Logger,
+	redisPool *sexredis.RedisPool, cfg *Cfg, session sessions.Session) (int, string) {
+
+}
+
+func taskResultApi(r *http.Request, w http.ResponseWriter, db *sql.DB, log *log.Logger,
+	redisPool *sexredis.RedisPool, cfg *Cfg, session sessions.Session) (int, string) {
+
 }
