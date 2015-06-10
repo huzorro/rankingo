@@ -91,4 +91,5 @@ func (self *ProxyCheck) SProcess(msg *sexredis.Msg) {
 	rc, err := self.p.Get()
 	defer self.p.Close(rc)
 	rc.RPush(RANKING_PROXY_QUEUE, js)
+	msg.Content = m
 }
