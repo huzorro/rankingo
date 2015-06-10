@@ -81,7 +81,7 @@ INSERT INTO sp_role (id, name, privilege, menu) VALUES (1, "匿名用户", 7, 0)
 CREATE TABLE sp_node_privilege (
     id int NOT NULL DEFAULT 0,
     name varchar(100) NOT NULL DEFAULT '',
-    node varchar(500) NOT NULL DEFAULT '' comment '1:/login, 2:/login/check, 4:/logout, 8:/key/add, 16:/key/update, 32:/key/show, 64:/key/one',
+    node varchar(500) NOT NULL DEFAULT '' comment '1:/login, 2:/login/check, 4:/logout, 8:/key/add, 16:/key/update, 32:/key/show, 64:/key/one, 128:/pay, 256',
     logtime timestamp NOT NULL DEFAULT current_timestamp ON update current_timestamp,
     PRIMARY KEY(id)
 )ENGINE=InnoDB DEFAULT CHARSET=utf8
@@ -122,3 +122,28 @@ SELECT a.id, a.username, a.password, a.roleid, b.name, b.privilege, a.accessid, 
     INNER JOIN sp_access_privilege c ON a.accessid = c.id
     WHERE username = ? AND password = ? 
 
+
+CREATE TABLE rangking_pay (
+    id int NOT NULL AUTO_INCREMENT,
+    uid int NOT NULL DEFAULT 0,
+    balance int NOT NULL DEFAULT 0,
+    logtime  timestamp NOT NULL DEFAULT current_timestamp ON UPDATE current_timestamp,
+    PRIMARY KEY(id)
+)
+
+CREATE TABLE ranking_pay_log (
+    id int NOT NULL AUTO_INCREMENT,
+    uid int NOT NULL DEFAULT 0,
+    money int NOT NULL DEFAULT 0,
+    logtime timestamp NOT NULL DEFAULT current_timestamp,
+    PRIMARY KEY(id)    
+)
+
+CREATE TABLE ranking_consume_log (
+    id int NOT NULL AUTO_INCREMENT,
+    uid int NOT NULL DEFAULT 0,
+    kid int NOT NULL DEFAULT 0,
+    money int NOT NULL  DEFAULT 0,
+    logtime timestamp NOT NULL DEFAULT current_timestamp,
+    PRIMARY KEY(id)
+)
