@@ -6,6 +6,7 @@ import (
 	"github.com/huzorro/spfactor/sexredis"
 	"github.com/martini-contrib/render"
 	"github.com/martini-contrib/sessions"
+	"io/ioutil"
 	"log"
 	"net/http"
 	"net/url"
@@ -16,8 +17,9 @@ import (
 )
 
 const (
-	RANKING_KEYWORD_QUEUE = "ranking:keyword:queue"
-	RANKING_KEYWORD_HASH  = "ranking:keyword:hash"
+	RANKING_KEYWORD_QUEUE     = "ranking:keyword:queue"
+	RANKING_KEYWORD_HASH      = "ranking:keyword:hash"
+	RANKING_TASK_RESULT_QUEUE = "ranking:task:result"
 )
 const (
 	RANKING_STATUS_START = iota
@@ -483,12 +485,97 @@ func keyAddAction(r *http.Request, w http.ResponseWriter, db *sql.DB, log *log.L
 	return http.StatusOK, string(js)
 }
 
-func taskOneApi(r *http.Request, w http.ResponseWriter, db *sql.DB, log *log.Logger,
-	redisPool *sexredis.RedisPool, cfg *Cfg, session sessions.Session) (int, string) {
+func taskOneApi(r *http.Request, w http.ResponseWriter, log *log.Logger,
+	redisPool *sexredis.RedisPool, cfg *Cfg) (int, string) {
+	redisClient, err := redisPool.Get()
+	defer redisPool.Close(redisClient)
+	if err != nil {
+		log.Printf("get connection of redis pool %s", err)
+		js, _ := json.Marshal(Status{"201", "操作失败"})
+		return http.StatusOK, string(js)
+	}
+	m, err := redisClient.LPop(RANKING_TASK_QUEUE)
+	if err != nil {
+		log.Printf("get out of queue elem fails %s", err)
+		js, _ := json.Marshal(Status{"201", "操作失败"})
+		return http.StatusOK, string(js)
+	}
+	if m != "" {
+		//出队后, 分时数据递减, 放入队尾
+		var msg TaskMsg
+		if err := json.Unmarshal([]byte(m), &msg); err != nil {
+			log.Printf("json Unmarshal fails %s", err)
+			js, _ := json.Marshal(Status{"201", "操作失败"})
+			return http.StatusOK, string(js)
+		}
+		h := time.Now().Format("15")
+		msg.NormMsg.Hour[h] = msg.NormMsg.Hour[h] - 1
+		js, _ := json.Marshal(msg)
+		if _, err := redisClient.RPush(RANKING_TASK_QUEUE, js); err != nil {
+			log.Printf("put end of the queue fails %s", err)
+		}
+		if msg.NormMsg.Hour[h] < 0 {
+			js, _ := json.Marshal(Status{"202", "该时段任务达标"})
+			return http.StatusOK, string(js)
+		}
+		return http.StatusOK, string(js)
+	} else {
+		log.Printf("not found elem in queue %s", err)
+		js, _ := json.Marshal(Status{"404", "没有发现任务"})
+		return http.StatusOK, string(js)
+	}
 
 }
 
 func taskResultApi(r *http.Request, w http.ResponseWriter, db *sql.DB, log *log.Logger,
 	redisPool *sexredis.RedisPool, cfg *Cfg, session sessions.Session) (int, string) {
+	data, err := ioutil.ReadAll(r.Body)
+	defer r.Body.Close()
+	if err != nil {
+		log.Printf("json read fails %s", err)
+		js, _ := json.Marshal(Status{"201", "操作失败"})
+		return http.StatusOK, string(js)
+	}
+	redisClient, err := redisPool.Get()
+	defer redisPool.Close(redisClient)
+	if err != nil {
+		log.Printf("get connection of redis pool %s", err)
+		js, _ := json.Marshal(Status{"201", "操作失败"})
+		return http.StatusOK, string(js)
+	}
+	if _, err := redisClient.RPush(RANKING_TASK_RESULT_QUEUE, data); err != nil {
+		log.Printf("put in %s fails %s", RANKING_TASK_RESULT_QUEUE, err)
+		js, _ := json.Marshal(Status{"201", "操作失败"})
+		return http.StatusOK, string(js)
+	} else {
+		js, _ := json.Marshal(Status{"200", "操作成功"})
+		return http.StatusOK, string(js)
+	}
+}
+
+func payAction(r *http.Request, w http.ResponseWriter, db *sql.DB,
+	log *log.Logger, cfg *Cfg, session sessions.Session) (int, string) {
+	r.ParseForm()
+	if r.PostFormValue("money") == "" || r.PostFormValue("userName") == "" {
+		log.Printf("pay money or userName is empty")
+		js, _ := json.Marshal(Status{"201", "操作失败"})
+		return http.StatusOK, string(js)
+	}
+	money, err := strconv.Atoi(r.PostFormValue("money"))
+	if err != nil {
+		log.Printf("pay money conversion failed %s", err)
+		js, _ := json.Marshal(Status{"201", "操作失败"})
+		return http.StatusOK, string(js)
+	}
+
+}
+
+func payLogAction(r *http.Request, w http.ResponseWriter, db *sql.DB,
+	log *log.Logger, cfg *Cfg, session sessions.Session) (int, string) {
+
+}
+
+func consumeLogAction(r *http.Request, w http.ResponseWriter, db *sql.DB,
+	log *log.Logger, cfg *Cfg, session sessions.Session) (int, string) {
 
 }
