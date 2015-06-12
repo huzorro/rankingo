@@ -157,8 +157,12 @@ func main() {
 		mtn.Post("/key/update", keyUpdateAction)
 		mtn.Post("/key/one", keyOneAction)
 		mtn.Get("/key/show", keyShowAction)
-	}
 
+	}
+	if *apiPtr {
+		mtn.Get("/api/task/one", taskOneApi)
+		mtn.Post("/api/task/result", taskResultApi)
+	}
 	if *webPtr || *apiPtr {
 		go http.ListenAndServe(*portPtr, mtn)
 	}
