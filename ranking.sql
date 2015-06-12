@@ -26,7 +26,6 @@ CREATE TABLE ranking_detail(
 )ENGINE=InnoDB DEFAULT CHARSET=utf8
 
 
-
 CREATE TABLE ranking_log(
     logid int NOT NULL AUTO_INCREMENT,  
     id int NOT NULL DEFAULT 0,
@@ -131,10 +130,13 @@ CREATE TABLE rangking_pay (
     PRIMARY KEY(id)
 )
 
+
+
 CREATE TABLE ranking_pay_log (
     id int NOT NULL AUTO_INCREMENT,
     uid int NOT NULL DEFAULT 0,
-    money int NOT NULL DEFAULT 0,
+    balance int NOT NULL DEFAULT 0,
+    remark varchar(100) NOT NULL DEFAULT "",
     logtime timestamp NOT NULL DEFAULT current_timestamp,
     PRIMARY KEY(id)    
 )
@@ -143,7 +145,8 @@ CREATE TABLE ranking_consume_log (
     id int NOT NULL AUTO_INCREMENT,
     uid int NOT NULL DEFAULT 0,
     kid int NOT NULL DEFAULT 0,
-    money int NOT NULL  DEFAULT 0,
+    balance int NOT NULL  DEFAULT 0,
     logtime timestamp NOT NULL DEFAULT current_timestamp,
     PRIMARY KEY(id)
 )
+
