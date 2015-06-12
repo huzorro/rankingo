@@ -51,8 +51,8 @@ type RBAC struct{}
 
 const (
 	SESSION_KEY_QUSER = "Quser"
-	ERROR_PAGE_NAME   = "500.html"
-	LOGIN_PAGE_NAME   = "login"
+	ERROR_PAGE_NAME   = "/500.html"
+	LOGIN_PAGE_NAME   = "/login"
 	NODE_LOGIN_PRI    = 1 << 0
 	NODE_RLOGIN_PRI   = 1 << 2
 
@@ -70,6 +70,7 @@ func (self *RBAC) Filter() martini.Handler {
 	return func(r *http.Request, w http.ResponseWriter, log *log.Logger, db *sql.DB, session sessions.Session, nMap map[string]*SpStatNode) {
 		w.Header().Set("Access-Control-Allow-Origin", "*")
 		path := r.URL.Path
+
 		user := SpStatUser{}
 
 		value := session.Get(SESSION_KEY_QUSER)
