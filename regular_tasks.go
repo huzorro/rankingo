@@ -49,7 +49,7 @@ func rebuild() func(r *RegularTasks) {
 					r.log.Printf("Got an array of type %s with %d elements (%v).\n",
 						reflect.TypeOf(m).Kind(), len(m), string(m[0].(*resp.Message).Interface().([]byte)))
 					for i := 0; i < len(m); i += 2 {
-						mk := string(m[i].(*resp.Message).Interface().([]byte))
+						//						mk := string(m[i].(*resp.Message).Interface().([]byte))
 						mv := string(m[i+1].(*resp.Message).Interface().([]byte))
 						//mp[mk] = mv
 						redisClient.RPush(RANKING_KEYWORD_QUEUE, mv)
