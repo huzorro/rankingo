@@ -38,6 +38,29 @@ type KeyMsg struct {
 	Logtime     string `json:"logtime,omitempty"`
 }
 
+type RankPay struct {
+	User    SpStatUser
+	Id      int64
+	Balance string
+	Logtime string
+}
+
+type RankPayLog struct {
+	User    SpStatUser
+	Id      int64
+	Balance string
+	Remark  string
+	Logtime string
+}
+
+type RankConsumeLog struct {
+	User    SpStatUser
+	Keyword NormMsg
+	Id      int64
+	Balance string
+	Logtime string
+}
+
 type Status struct {
 	Status string `json:"status"`
 	Text   string `json:"text"`
@@ -46,6 +69,16 @@ type Status struct {
 type PageResult struct {
 	Result
 	Norms []*NormMsg
+}
+
+type PayLogPageResult struct {
+	Result
+	RankPayLogs []*RankPayLog
+}
+
+type ConsumeLogPageResult struct {
+	Result
+	RankConsumeLogs []*RankConsumeLog
 }
 
 func logout(r *http.Request, w http.ResponseWriter, log *log.Logger, session sessions.Session) {
@@ -553,29 +586,253 @@ func taskResultApi(r *http.Request, w http.ResponseWriter, db *sql.DB, log *log.
 	}
 }
 
-func payAction(r *http.Request, w http.ResponseWriter, db *sql.DB,
+func payAdminAction(r *http.Request, w http.ResponseWriter, db *sql.DB,
 	log *log.Logger, cfg *Cfg, session sessions.Session) (int, string) {
 	r.ParseForm()
-	if r.PostFormValue("money") == "" || r.PostFormValue("userName") == "" {
-		log.Printf("pay money or userName is empty")
+	if r.PostFormValue("balance") == "" || r.PostFormValue("uid") == "" || r.PostFormValue("remark") == "" {
+		log.Printf("pay balance or uid is empty")
 		js, _ := json.Marshal(Status{"201", "操作失败"})
 		return http.StatusOK, string(js)
 	}
-	money, err := strconv.Atoi(r.PostFormValue("money"))
+	balance, err := strconv.Atoi(r.PostFormValue("balance"))
+	uid, err := strconv.Atoi(r.PostFormValue("uid"))
 	if err != nil {
-		log.Printf("pay money conversion failed %s", err)
+		log.Printf("pay balance conversion failed %s", err)
+		js, _ := json.Marshal(Status{"201", "操作失败"})
+		return http.StatusOK, string(js)
+	}
+	tx, err := db.Begin()
+
+	stmtInLog, err := tx.Prepare("INSERT INTO ranking_pay_log (uid, balance, remark) VALUES(?, ?, ?)")
+	defer stmtInLog.Close()
+	if err != nil {
+		log.Printf("insert into ranking pay log fails %s", err)
+		js, _ := json.Marshal(Status{"201", "操作失败"})
+		return http.StatusOK, string(js)
+	}
+	_, err = stmtInLog.Exec(uid, balance, r.PostFormValue("remark"))
+	if err != nil {
+		tx.Rollback()
+		log.Printf("insert into ranking pay log fails %s", err)
+		js, _ := json.Marshal(Status{"201", "操作失败"})
+		return http.StatusOK, string(js)
+	}
+	stmtInPay, err := tx.Prepare("INSERT INTO ranking_pay (uid, balance) VALUES(?, ?) ON DUPLICATE KEY UPDATE balance = balance + VALUES(balance)")
+	defer stmtInPay.Close()
+	if err != nil {
+		log.Printf("insert into ranking pay fails %s", err)
+		js, _ := json.Marshal(Status{"201", "操作失败"})
+		return http.StatusOK, string(js)
+	}
+	if _, err := stmtInPay.Exec(uid, balance); err != nil {
+		tx.Rollback()
+		log.Printf("insert into ranking pay fails %s", err)
 		js, _ := json.Marshal(Status{"201", "操作失败"})
 		return http.StatusOK, string(js)
 	}
 
+	if err := tx.Commit(); err != nil {
+		tx.Rollback()
+		log.Printf("tx commit fails %s", err)
+		js, _ := json.Marshal(Status{"201", "操作失败"})
+		return http.StatusOK, string(js)
+	} else {
+		log.Printf("%s: %d succeed", r.PostFormValue("remark"), balance)
+		js, _ := json.Marshal(Status{"200", "操作成功"})
+		return http.StatusOK, string(js)
+	}
 }
 
-func payLogAction(r *http.Request, w http.ResponseWriter, db *sql.DB,
-	log *log.Logger, cfg *Cfg, session sessions.Session) (int, string) {
+func payLogAction(r *http.Request, w http.ResponseWriter, db *sql.DB, log *log.Logger,
+	redisPool *sexredis.RedisPool, cfg *Cfg, session sessions.Session, ms []*SpStatMenu, render render.Render) {
+	var (
+		paylog  *RankPayLog
+		paylogs []*RankPayLog
+		menu    []*SpStatMenu
+		user    SpStatUser
+		con     string
+		totalN  int64
+		pr      *PayLogPageResult
+		destPn  int64
+	)
+	path := r.URL.Path
+	r.ParseForm()
+	value := session.Get(SESSION_KEY_QUSER)
 
+	if v, ok := value.([]byte); ok {
+		json.Unmarshal(v, &user)
+	} else {
+		log.Printf("session stroe type error")
+		http.Redirect(w, r, ERROR_PAGE_NAME, 301)
+		return
+	}
+
+	switch user.Access.Rule {
+	case GROUP_PRI_ALL:
+	case GROUP_PRI_ALLOW:
+		con = "WHERE uid IN(" + strings.Join(user.Access.Group, ",") + ")"
+	case GROUP_PRI_BAN:
+		con = "WHERE uid NOT IN(" + strings.Join(user.Access.Group, ",") + ")"
+	default:
+		log.Printf("group private erros")
+	}
+
+	for _, elem := range ms {
+		if (user.Role.Menu & elem.Id) == elem.Id {
+			menu = append(menu, elem)
+		}
+	}
+	stmtOut, err := db.Prepare("SELECT COUNT(*) FROM ranking_pay_log " + con)
+	if err != nil {
+		log.Printf("%s", err)
+		http.Redirect(w, r, ERROR_PAGE_NAME, 301)
+		return
+	}
+	row := stmtOut.QueryRow()
+	if err = row.Scan(&totalN); err != nil {
+		log.Printf("%s", err)
+		http.Redirect(w, r, ERROR_PAGE_NAME, 301)
+		return
+	}
+	//page
+	if r.URL.Query().Get("p") != "" {
+		destPn, _ = strconv.ParseInt(r.URL.Query().Get("p"), 10, 64)
+	} else {
+		destPn = 1
+	}
+	details := make(Details, totalN)
+	result := Result{Data: make(Details, cfg.PageSize)}
+	details.Page(int(destPn), &result)
+
+	stmtOut, err = db.Prepare(`SELECT id, uid, balance, remark, logtime FROM ranking_pay_log ` + con + " ORDER BY id DESC LIMIT ?, ?")
+	defer stmtOut.Close()
+	rows, err := stmtOut.Query(cfg.PageSize*(destPn-1), cfg.PageSize)
+	defer rows.Close()
+	if err != nil {
+		log.Printf("%s", err)
+		http.Redirect(w, r, ERROR_PAGE_NAME, 301)
+		return
+	}
+	for rows.Next() {
+		paylog = &RankPayLog{}
+		if err := rows.Scan(&paylog.Id, &paylog.User.Id, &paylog.Balance, &paylog.Remark, &paylog.Logtime); err != nil {
+			log.Printf("%s", err)
+			http.Redirect(w, r, ERROR_PAGE_NAME, 301)
+			return
+		}
+		paylogs = append(paylogs, paylog)
+	}
+	pr = &PayLogPageResult{}
+	pr.Result = result
+	pr.RankPayLogs = make([]*RankPayLog, pr.CurrentTotal)
+	if totalN > 0 {
+		copy(pr.RankPayLogs, paylogs)
+	}
+	paginator := NewPaginator(r, cfg.PageSize, totalN)
+
+	ret := struct {
+		Menu      []*SpStatMenu
+		Result    *PayLogPageResult
+		Paginator *Paginator
+	}{menu, pr, paginator}
+
+	index := strings.LastIndex(path, "/")
+	render.HTML(200, path[index+1:], ret)
 }
 
-func consumeLogAction(r *http.Request, w http.ResponseWriter, db *sql.DB,
-	log *log.Logger, cfg *Cfg, session sessions.Session) (int, string) {
+func consumeLogAction(r *http.Request, w http.ResponseWriter, db *sql.DB, log *log.Logger,
+	redisPool *sexredis.RedisPool, cfg *Cfg, session sessions.Session, ms []*SpStatMenu, render render.Render) {
+	var (
+		consumelog  *RankConsumeLog
+		consumelogs []*RankConsumeLog
+		menu        []*SpStatMenu
+		user        SpStatUser
+		con         string
+		totalN      int64
+		pr          *ConsumeLogPageResult
+		destPn      int64
+	)
+	path := r.URL.Path
+	r.ParseForm()
+	value := session.Get(SESSION_KEY_QUSER)
 
+	if v, ok := value.([]byte); ok {
+		json.Unmarshal(v, &user)
+	} else {
+		log.Printf("session stroe type error")
+		http.Redirect(w, r, ERROR_PAGE_NAME, 301)
+		return
+	}
+
+	switch user.Access.Rule {
+	case GROUP_PRI_ALL:
+	case GROUP_PRI_ALLOW:
+		con = "WHERE uid IN(" + strings.Join(user.Access.Group, ",") + ")"
+	case GROUP_PRI_BAN:
+		con = "WHERE uid NOT IN(" + strings.Join(user.Access.Group, ",") + ")"
+	default:
+		log.Printf("group private erros")
+	}
+
+	for _, elem := range ms {
+		if (user.Role.Menu & elem.Id) == elem.Id {
+			menu = append(menu, elem)
+		}
+	}
+	stmtOut, err := db.Prepare("SELECT COUNT(*) FROM ranking_consume_log " + con)
+	if err != nil {
+		log.Printf("%s", err)
+		http.Redirect(w, r, ERROR_PAGE_NAME, 301)
+		return
+	}
+	row := stmtOut.QueryRow()
+	if err = row.Scan(&totalN); err != nil {
+		log.Printf("%s", err)
+		http.Redirect(w, r, ERROR_PAGE_NAME, 301)
+		return
+	}
+	//page
+	if r.URL.Query().Get("p") != "" {
+		destPn, _ = strconv.ParseInt(r.URL.Query().Get("p"), 10, 64)
+	} else {
+		destPn = 1
+	}
+	details := make(Details, totalN)
+	result := Result{Data: make(Details, cfg.PageSize)}
+	details.Page(int(destPn), &result)
+
+	stmtOut, err = db.Prepare(`SELECT id, uid, kid, balance, logtime FROM ranking_consume_log ` + con + " ORDER BY id DESC LIMIT ?, ?")
+	defer stmtOut.Close()
+	rows, err := stmtOut.Query(cfg.PageSize*(destPn-1), cfg.PageSize)
+	defer rows.Close()
+	if err != nil {
+		log.Printf("%s", err)
+		http.Redirect(w, r, ERROR_PAGE_NAME, 301)
+		return
+	}
+	for rows.Next() {
+		consumelog = &RankConsumeLog{}
+		if err := rows.Scan(&consumelog.Id, &consumelog.User.Id, &consumelog.Keyword.KeyMsg.Id, &consumelog.Balance, &consumelog.Logtime); err != nil {
+			log.Printf("%s", err)
+			http.Redirect(w, r, ERROR_PAGE_NAME, 301)
+			return
+		}
+		consumelogs = append(consumelogs, consumelog)
+	}
+	pr = &ConsumeLogPageResult{}
+	pr.Result = result
+	pr.RankConsumeLogs = make([]*RankConsumeLog, pr.CurrentTotal)
+	if totalN > 0 {
+		copy(pr.RankConsumeLogs, consumelogs)
+	}
+	paginator := NewPaginator(r, cfg.PageSize, totalN)
+
+	ret := struct {
+		Menu      []*SpStatMenu
+		Result    *ConsumeLogPageResult
+		Paginator *Paginator
+	}{menu, pr, paginator}
+
+	index := strings.LastIndex(path, "/")
+	render.HTML(200, path[index+1:], ret)
 }
