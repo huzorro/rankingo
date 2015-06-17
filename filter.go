@@ -54,7 +54,7 @@ const (
 	ERROR_PAGE_NAME   = "/500.html"
 	LOGIN_PAGE_NAME   = "/login"
 	NODE_LOGIN_PRI    = 1 << 0
-	NODE_RLOGIN_PRI   = 1 << 2
+	NODE_RLOGIN_PRI   = 1 << 1
 
 	ROLE_GUESS_ID = 1 << 0
 

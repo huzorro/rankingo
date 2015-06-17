@@ -148,15 +148,29 @@ func main() {
 	mtn.Map(&cfg)
 
 	if *webPtr {
+		//rbac filter
+		rbac := &RBAC{}
+		mtn.Use(rbac.Filter())
 		mtn.Get("/login", func(r render.Render) {
 			r.HTML(200, "login", "")
 		})
+		mtn.Get("/", keyShowAction)
 		mtn.Get("/logout", logout)
 		mtn.Post("/login/check", loginCheck)
 		mtn.Post("/key/add", keyAddAction)
 		mtn.Post("/key/update", keyUpdateAction)
 		mtn.Post("/key/one", keyOneAction)
-		mtn.Get("/key/show", keyShowAction)
+		mtn.Get("/keyshow", keyShowAction)
+
+		mtn.Get("/paylog", payLogAction)
+		mtn.Get("/consumelog", consumeLogAction)
+
+		//		mtn.Post("/pay", payAdminAction)
+
+		//		mtn.Post("/user/view", viewUserAction)
+		//		mtn.Get("/usersview", viewUsersAction)
+		//		mtn.Post("/user/add", addUserAction)
+		//		mtn.Post("/user/edit", editUserAction)
 
 	}
 	if *apiPtr {

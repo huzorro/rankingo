@@ -81,6 +81,19 @@ type ConsumeLogPageResult struct {
 	RankConsumeLogs []*RankConsumeLog
 }
 
+type UserRelation struct {
+	User   *SpStatUser
+	Role   *SpStatRole
+	Access *SpStatAccess
+	Pay    *RankPay
+	KeyN   int64
+}
+
+type UserRelationPageResult struct {
+	Result
+	UserRelations []*UserRelation
+}
+
 func logout(r *http.Request, w http.ResponseWriter, log *log.Logger, session sessions.Session) {
 	session.Clear()
 	http.Redirect(w, r, LOGIN_PAGE_NAME, 301)
@@ -223,6 +236,7 @@ func keyShowAction(r *http.Request, w http.ResponseWriter, db *sql.DB, log *log.
 		totalN int64
 		pr     *PageResult
 		destPn int64
+		money  int64
 	)
 	path := r.URL.Path
 	r.ParseForm()
@@ -306,15 +320,34 @@ func keyShowAction(r *http.Request, w http.ResponseWriter, db *sql.DB, log *log.
 		copy(pr.Norms, nms)
 	}
 	paginator := NewPaginator(r, cfg.PageSize, totalN)
-
+	//余额
+	stmtOutPay, err := db.Prepare("SELECT IFNULL(SUM(balance),0) FROM ranking_pay " + con)
+	defer stmtOutPay.Close()
+	if err != nil {
+		log.Printf("%s", err)
+		http.Redirect(w, r, ERROR_PAGE_NAME, 301)
+		return
+	}
+	row = stmtOutPay.QueryRow()
+	if err := row.Scan(&money); err != nil {
+		log.Printf("%s", err)
+		http.Redirect(w, r, ERROR_PAGE_NAME, 301)
+		return
+	}
 	ret := struct {
 		Menu      []*SpStatMenu
 		Result    *PageResult
 		Paginator *Paginator
-	}{menu, pr, paginator}
+		User      *SpStatUser
+		Money     int64
+	}{menu, pr, paginator, &user, money}
 
-	index := strings.LastIndex(path, "/")
-	render.HTML(200, path[index+1:], ret)
+	if path == "/" {
+		render.HTML(200, menu[0].Name, ret)
+	} else {
+		index := strings.LastIndex(path, "/")
+		render.HTML(200, path[index+1:], ret)
+	}
 }
 
 func keyUpdateAction(r *http.Request, w http.ResponseWriter, db *sql.DB, log *log.Logger,
@@ -636,11 +669,11 @@ func payAdminAction(r *http.Request, w http.ResponseWriter, db *sql.DB,
 		log.Printf("tx commit fails %s", err)
 		js, _ := json.Marshal(Status{"201", "操作失败"})
 		return http.StatusOK, string(js)
-	} else {
-		log.Printf("%s: %d succeed", r.PostFormValue("remark"), balance)
-		js, _ := json.Marshal(Status{"200", "操作成功"})
-		return http.StatusOK, string(js)
 	}
+	log.Printf("%s: %d succeed", r.PostFormValue("remark"), balance)
+	js, _ := json.Marshal(Status{"200", "操作成功"})
+	return http.StatusOK, string(js)
+
 }
 
 func payLogAction(r *http.Request, w http.ResponseWriter, db *sql.DB, log *log.Logger,
@@ -654,6 +687,7 @@ func payLogAction(r *http.Request, w http.ResponseWriter, db *sql.DB, log *log.L
 		totalN  int64
 		pr      *PayLogPageResult
 		destPn  int64
+		money   int64
 	)
 	path := r.URL.Path
 	r.ParseForm()
@@ -729,12 +763,27 @@ func payLogAction(r *http.Request, w http.ResponseWriter, db *sql.DB, log *log.L
 		copy(pr.RankPayLogs, paylogs)
 	}
 	paginator := NewPaginator(r, cfg.PageSize, totalN)
-
+	//余额
+	stmtOutPay, err := db.Prepare("SELECT IFNULL(SUM(balance), 0) FROM ranking_pay " + con)
+	defer stmtOutPay.Close()
+	if err != nil {
+		log.Printf("%s", err)
+		http.Redirect(w, r, ERROR_PAGE_NAME, 301)
+		return
+	}
+	row = stmtOutPay.QueryRow()
+	if err := row.Scan(&money); err != nil {
+		log.Printf("%s", err)
+		http.Redirect(w, r, ERROR_PAGE_NAME, 301)
+		return
+	}
 	ret := struct {
 		Menu      []*SpStatMenu
 		Result    *PayLogPageResult
 		Paginator *Paginator
-	}{menu, pr, paginator}
+		User      *SpStatUser
+		Money     int64
+	}{menu, pr, paginator, &user, money}
 
 	index := strings.LastIndex(path, "/")
 	render.HTML(200, path[index+1:], ret)
@@ -751,6 +800,7 @@ func consumeLogAction(r *http.Request, w http.ResponseWriter, db *sql.DB, log *l
 		totalN      int64
 		pr          *ConsumeLogPageResult
 		destPn      int64
+		money       int64
 	)
 	path := r.URL.Path
 	r.ParseForm()
@@ -826,13 +876,286 @@ func consumeLogAction(r *http.Request, w http.ResponseWriter, db *sql.DB, log *l
 		copy(pr.RankConsumeLogs, consumelogs)
 	}
 	paginator := NewPaginator(r, cfg.PageSize, totalN)
-
+	//余额
+	stmtOutPay, err := db.Prepare("SELECT IFNULL(SUM(balance), 0) FROM ranking_pay " + con)
+	defer stmtOutPay.Close()
+	if err != nil {
+		log.Printf("%s", err)
+		http.Redirect(w, r, ERROR_PAGE_NAME, 301)
+		return
+	}
+	row = stmtOutPay.QueryRow()
+	if err := row.Scan(&money); err != nil {
+		log.Printf("%s", err)
+		http.Redirect(w, r, ERROR_PAGE_NAME, 301)
+		return
+	}
 	ret := struct {
 		Menu      []*SpStatMenu
 		Result    *ConsumeLogPageResult
 		Paginator *Paginator
-	}{menu, pr, paginator}
+		User      *SpStatUser
+		Money     int64
+	}{menu, pr, paginator, &user, money}
 
 	index := strings.LastIndex(path, "/")
 	render.HTML(200, path[index+1:], ret)
+}
+
+func viewUsersAction(r *http.Request, w http.ResponseWriter, db *sql.DB, log *log.Logger,
+	redisPool *sexredis.RedisPool, cfg *Cfg, session sessions.Session, ms []*SpStatMenu, render render.Render) {
+	var (
+		userRelation  *UserRelation
+		userRelations []*UserRelation
+		menu          []*SpStatMenu
+		user          SpStatUser
+		con           string
+		totalN        int64
+		pr            *UserRelationPageResult
+		destPn        int64
+		money         int64
+	)
+	path := r.URL.Path
+	r.ParseForm()
+	value := session.Get(SESSION_KEY_QUSER)
+
+	if v, ok := value.([]byte); ok {
+		json.Unmarshal(v, &user)
+	} else {
+		log.Printf("session stroe type error")
+		http.Redirect(w, r, ERROR_PAGE_NAME, 301)
+		return
+	}
+
+	switch user.Access.Rule {
+	case GROUP_PRI_ALL:
+	case GROUP_PRI_ALLOW:
+		con = "WHERE id IN(" + strings.Join(user.Access.Group, ",") + ")"
+	case GROUP_PRI_BAN:
+		con = "WHERE id NOT IN(" + strings.Join(user.Access.Group, ",") + ")"
+	default:
+		log.Printf("group private erros")
+	}
+
+	for _, elem := range ms {
+		if (user.Role.Menu & elem.Id) == elem.Id {
+			menu = append(menu, elem)
+		}
+	}
+	stmtOut, err := db.Prepare("SELECT COUNT(*) FROM sp_user " + con)
+	if err != nil {
+		log.Printf("%s", err)
+		http.Redirect(w, r, ERROR_PAGE_NAME, 301)
+		return
+	}
+	row := stmtOut.QueryRow()
+	if err = row.Scan(&totalN); err != nil {
+		log.Printf("%s", err)
+		http.Redirect(w, r, ERROR_PAGE_NAME, 301)
+		return
+	}
+	//page
+	if r.URL.Query().Get("p") != "" {
+		destPn, _ = strconv.ParseInt(r.URL.Query().Get("p"), 10, 64)
+	} else {
+		destPn = 1
+	}
+	details := make(Details, totalN)
+	result := Result{Data: make(Details, cfg.PageSize)}
+	details.Page(int(destPn), &result)
+
+	stmtOut, err = db.Prepare(`SELECT a.id, a.username, a.password, a.roleid, a.accessid,  
+			b.name, c.pri_group, c.pri_rule, IFNULL(d.balance, 0) AS money, 
+			COUNT(e.id) AS number FROM sp_user a LEFT JOIN sp_role b ON a.roleid = b.id 
+			LEFT JOIN sp_access_privilege c  ON a.accessid = c.id 
+			LEFT JOIN rangking_pay d ON a.id = d.uid LEFT JOIN 
+			ranking_detail e ON a.id = e.uid ` + con + " GROUP BY a.id ORDER BY id DESC LIMIT ?, ?")
+	defer stmtOut.Close()
+	rows, err := stmtOut.Query(cfg.PageSize*(destPn-1), cfg.PageSize)
+	defer rows.Close()
+	if err != nil {
+		log.Printf("%s", err)
+		http.Redirect(w, r, ERROR_PAGE_NAME, 301)
+		return
+	}
+	for rows.Next() {
+		userRelation = &UserRelation{}
+		if err := rows.Scan(&userRelation.User.Id, &userRelation.User.UserName, &userRelation.User.Password,
+			&userRelation.User.Role.Id, &userRelation.User.Access.Id, &userRelation.Role.Name, &userRelation.Access.Group,
+			&userRelation.Access.Rule, &userRelation.Pay.Balance, &userRelation.KeyN); err != nil {
+			log.Printf("%s", err)
+			http.Redirect(w, r, ERROR_PAGE_NAME, 301)
+			return
+		}
+		userRelations = append(userRelations, userRelation)
+	}
+
+	pr = &UserRelationPageResult{}
+	pr.Result = result
+	pr.UserRelations = make([]*UserRelation, pr.CurrentTotal)
+	if totalN > 0 {
+		copy(pr.UserRelations, userRelations)
+	}
+	paginator := NewPaginator(r, cfg.PageSize, totalN)
+	//余额
+	stmtOutPay, err := db.Prepare("SELECT SUM(balance) FROM ranking_pay " + con)
+	defer stmtOutPay.Close()
+	if err != nil {
+		log.Printf("%s", err)
+		http.Redirect(w, r, ERROR_PAGE_NAME, 301)
+		return
+	}
+	row = stmtOutPay.QueryRow()
+	if err := row.Scan(&money); err != nil {
+		log.Printf("%s", err)
+		http.Redirect(w, r, ERROR_PAGE_NAME, 301)
+		return
+	}
+	ret := struct {
+		Menu      []*SpStatMenu
+		Result    *UserRelationPageResult
+		Paginator *Paginator
+		User      *SpStatUser
+		Money     int64
+	}{menu, pr, paginator, &user, money}
+
+	index := strings.LastIndex(path, "/")
+	render.HTML(200, path[index+1:], ret)
+}
+
+func editUserAction(r *http.Request, w http.ResponseWriter, db *sql.DB, log *log.Logger,
+	redisPool *sexredis.RedisPool, cfg *Cfg, session sessions.Session, ms []*SpStatMenu, render render.Render) (int, string) {
+	var (
+		user SpStatUser
+	)
+	r.ParseForm()
+	id, err := url.QueryUnescape(strings.TrimSpace(r.PostFormValue("id")))
+	user.Id, _ = strconv.ParseInt(id, 10, 64)
+	user.UserName, err = url.QueryUnescape(strings.TrimSpace(r.PostFormValue("userName")))
+	user.Password, err = url.QueryUnescape(strings.TrimSpace(r.PostFormValue("password")))
+	roleid, err := url.QueryUnescape(strings.TrimSpace(r.PostFormValue("roleid")))
+	user.Role.Id, _ = strconv.ParseInt(roleid, 10, 64)
+	accessid, err := url.QueryUnescape(strings.TrimSpace(r.PostFormValue("accessid")))
+	user.Access.Id, _ = strconv.ParseInt(accessid, 10, 64)
+
+	if err != nil {
+		log.Printf("post param parse fails %s", err)
+		js, _ := json.Marshal(Status{"201", "操作失败"})
+		return http.StatusOK, string(js)
+	}
+	stmtIn, err := db.Prepare("UPDATE sp_user SET name=?, password=?, roleid=?, accessid=? WHERE id = ?")
+	defer stmtIn.Close()
+	if _, err = stmtIn.Exec(user.UserName, user.Password, user.Role.Id, user.Access.Id, user.Id); err != nil {
+		log.Printf("%s", err)
+		js, _ := json.Marshal(Status{"201", "操作失败"})
+		return http.StatusOK, string(js)
+	}
+	js, _ := json.Marshal(Status{"200", "操作成功"})
+	return http.StatusOK, string(js)
+}
+
+func viewUserAction(r *http.Request, w http.ResponseWriter, db *sql.DB, log *log.Logger,
+	redisPool *sexredis.RedisPool, cfg *Cfg, session sessions.Session, ms []*SpStatMenu, render render.Render) (int, string) {
+	var (
+		user SpStatUser
+	)
+	r.ParseForm()
+	id, err := url.QueryUnescape(strings.TrimSpace(r.PostFormValue("id")))
+	user.Id, _ = strconv.ParseInt(id, 10, 64)
+	stmtOut, err := db.Prepare("SELECT username, password, roleid, accessid FROM sp_user WHERE id = ?")
+	defer stmtOut.Close()
+	row := stmtOut.QueryRow(user.Id)
+	err = row.Scan(&user.UserName, &user.Password, &user.Role.Id, &user.Access.Id)
+	if err != nil {
+		log.Printf("%s", err)
+		js, _ := json.Marshal(Status{"201", "操作失败"})
+		return http.StatusOK, string(js)
+	}
+	if js, err := json.Marshal(user); err != nil {
+		log.Printf("%s", err)
+		js, _ := json.Marshal(Status{"201", "操作失败"})
+		return http.StatusOK, string(js)
+	} else {
+		return http.StatusOK, string(js)
+	}
+}
+
+func addUserAction(r *http.Request, w http.ResponseWriter, db *sql.DB, log *log.Logger,
+	redisPool *sexredis.RedisPool, cfg *Cfg, session sessions.Session, ms []*SpStatMenu, render render.Render) (int, string) {
+	r.ParseForm()
+	userName, err := url.QueryUnescape(strings.TrimSpace(r.PostFormValue("userName")))
+	password, err := url.QueryUnescape(strings.TrimSpace(r.PostFormValue("password")))
+	tx, err := db.Begin()
+	if err != nil {
+		log.Printf("%s", err)
+		js, _ := json.Marshal(Status{"201", "操作失败"})
+		return http.StatusOK, string(js)
+	}
+	stmtIn, err := tx.Prepare("INSERT INTO sp_user (username, password) VALUES(?, ?)")
+	defer stmtIn.Close()
+
+	if err != nil {
+		log.Printf("%s", err)
+		js, _ := json.Marshal(Status{"201", "操作失败"})
+		return http.StatusOK, string(js)
+	}
+
+	result, err := stmtIn.Exec(userName, password)
+	if err != nil {
+		log.Printf("%s", err)
+		js, _ := json.Marshal(Status{"201", "操作失败"})
+		return http.StatusOK, string(js)
+	}
+	id, err := result.LastInsertId()
+	if err != nil {
+		log.Printf("%s", err)
+		js, _ := json.Marshal(Status{"201", "操作失败"})
+		return http.StatusOK, string(js)
+	}
+	stmtInAccess, err := tx.Prepare("INSERT INTO sp_access_privilege(pri_group) VALUES(?)")
+	defer stmtInAccess.Close()
+	if err != nil {
+		tx.Rollback()
+		log.Printf("%s", err)
+		js, _ := json.Marshal(Status{"201", "操作失败"})
+		return http.StatusOK, string(js)
+	}
+	result, err = stmtInAccess.Exec(id)
+	if err != nil {
+		tx.Rollback()
+		log.Printf("%s", err)
+		js, _ := json.Marshal(Status{"201", "操作失败"})
+		return http.StatusOK, string(js)
+	}
+	accessId, err := result.LastInsertId()
+	if err != nil {
+		tx.Rollback()
+		log.Printf("%s", err)
+		js, _ := json.Marshal(Status{"201", "操作失败"})
+		return http.StatusOK, string(js)
+	}
+	stmtInUpdate, err := tx.Prepare("UPDATE sp_user SET accessid = ? WHERE id = ?")
+	defer stmtInUpdate.Close()
+	if err != nil {
+		tx.Rollback()
+		log.Printf("%s", err)
+		js, _ := json.Marshal(Status{"201", "操作失败"})
+		return http.StatusOK, string(js)
+	}
+	_, err = stmtInUpdate.Exec(accessId, id)
+
+	if err != nil {
+		tx.Rollback()
+		log.Printf("%s", err)
+		js, _ := json.Marshal(Status{"201", "操作失败"})
+		return http.StatusOK, string(js)
+	}
+	if err := tx.Commit(); err != nil {
+		tx.Rollback()
+		log.Printf("%s", err)
+		js, _ := json.Marshal(Status{"201", "操作失败"})
+		return http.StatusOK, string(js)
+	}
+	js, _ := json.Marshal(Status{"200", "操作成功"})
+	return http.StatusOK, string(js)
 }

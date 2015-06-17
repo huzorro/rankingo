@@ -75,19 +75,21 @@ CREATE TABLE sp_role (
     PRIMARY KEY(id)
 )ENGINE=InnoDB DEFAULT CHARSET=utf8
 
-INSERT INTO sp_role (id, name, privilege, menu) VALUES (1, "匿名用户", 7, 0), (2, "管理员", 127, 1)
+INSERT INTO sp_role (id, name, privilege, menu) VALUES (1, "匿名用户", 7, 0), (2, "管理员", 1023, 7)
 
 CREATE TABLE sp_node_privilege (
     id int NOT NULL DEFAULT 0,
     name varchar(100) NOT NULL DEFAULT '',
-    node varchar(500) NOT NULL DEFAULT '' comment '1:/login, 2:/login/check, 4:/logout, 8:/key/add, 16:/key/update, 32:/key/show, 64:/key/one, 128:/pay, 256',
+    node varchar(500) NOT NULL DEFAULT '' comment '1:/login, 2:/login/check, 4:/logout, 8:/key/add, 16:/key/update, 32:/key/show, 64:/key/one, 128:/paylog, 256:/, 512:/consumelog',
     logtime timestamp NOT NULL DEFAULT current_timestamp ON update current_timestamp,
     PRIMARY KEY(id)
 )ENGINE=InnoDB DEFAULT CHARSET=utf8
 
 
 
-INSERT INTO sp_node_privilege (id, name, node)  VALUES (1, "登录页", "/login"), (2, "登录验证请求", "/login/check"), (4, "退出登录", "/logout"), (8, "关键字添加", "/key/add"), (16, "关键字更新", "/key/update"), (32, "关键字列表", "/key/show"), (64, "单个关键字", "/key/one")
+INSERT INTO sp_node_privilege (id, name, node)  VALUES (1, "登录页", "/login"), (2, "登录验证请求", "/login/check"), (4, "退出登录", "/logout"), (8, "关键字添加", "/key/add"), (16, "关键字更新", "/key/update"), (32, "关键字列表", "/keyshow"), (64, "单个关键字", "/key/one"), (128, "充值记录", "/paylog"), (256, "首页", "/"), (512, "消费记录", "/consumelog")
+
+INSERT INTO sp_node_privilege (id, name, node)  VALUES(512, "消费记录", "/consumelog")
 
 
 CREATE TABLE sp_access_privilege (
@@ -113,8 +115,9 @@ CREATE TABLE sp_menu_template (
 )ENGINE=InnoDB DEFAULT CHARSET=utf8
 
 
-INSERT INTO sp_menu_template (id, title, name)  VALUES(1, "关键词管理", "show")
+INSERT INTO sp_menu_template (id, title, name)  VALUES(1, "关键词管理", "keyshow"), (2, "充值记录", "paylog"), (4, "消费记录", "consumelog")
 
+INSERT INTO sp_menu_template (id, title, name)  VALUES(4, "消费记录", "consumelog")
 
 SELECT a.id, a.username, a.password, a.roleid, b.name, b.privilege, a.accessid, c.group, c.rule FROM sp_user a 
     INNER JOIN sp_role b ON a.roleid = b.id
@@ -122,15 +125,15 @@ SELECT a.id, a.username, a.password, a.roleid, b.name, b.privilege, a.accessid, 
     WHERE username = ? AND password = ? 
 
 
-CREATE TABLE rangking_pay (
+CREATE TABLE ranking_pay (
     id int NOT NULL AUTO_INCREMENT,
     uid int NOT NULL DEFAULT 0,
     balance int NOT NULL DEFAULT 0,
     logtime  timestamp NOT NULL DEFAULT current_timestamp ON UPDATE current_timestamp,
     PRIMARY KEY(id)
-)
+)ENGINE=InnoDB DEFAULT CHARSET=utf8
 
-
+INSERT INTO ranking_pay(uid, balance) VALUES(1, 1200)
 
 CREATE TABLE ranking_pay_log (
     id int NOT NULL AUTO_INCREMENT,
@@ -139,7 +142,10 @@ CREATE TABLE ranking_pay_log (
     remark varchar(100) NOT NULL DEFAULT "",
     logtime timestamp NOT NULL DEFAULT current_timestamp,
     PRIMARY KEY(id)    
-)
+)ENGINE=InnoDB DEFAULT CHARSET=utf8
+
+INSERT INTO ranking_pay_log(uid, balance, remark) VALUES(1, 1000, "充值")
+INSERT INTO ranking_pay_log(uid, balance, remark) VALUES(1, 200, "返点")
 
 CREATE TABLE ranking_consume_log (
     id int NOT NULL AUTO_INCREMENT,
@@ -148,5 +154,7 @@ CREATE TABLE ranking_consume_log (
     balance int NOT NULL  DEFAULT 0,
     logtime timestamp NOT NULL DEFAULT current_timestamp,
     PRIMARY KEY(id)
-)
+)ENGINE=InnoDB DEFAULT CHARSET=utf8
+
+INSERT INTO ranking_consume_log(uid, kid, balance) VALUES(1, 38, 200)
 

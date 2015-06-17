@@ -9,9 +9,9 @@ import (
 )
 
 func TestHttpGet(t *testing.T) {
-	//	resp, _ := HttpGet("https://www.oschina.net/home/login")
+	resp, err := HttpGet("https://www.oschina.net/home/login")
 	//		resp, _ := HttpGet("http://ip138.com")
-	resp, err := HttpGetFromProxy("http://www.ip.cn", "https://117.185.13.86:8006")
+	//	resp, err := HttpGetFromProxy("http://www.ip.cn", "https://117.185.13.86:8006")
 	if err != nil {
 		fmt.Println(err)
 	}

@@ -1,0 +1,132 @@
+<!DOCTYPE html>
+<html lang="zh">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="">
+    <meta name="author" content="">
+    <title></title>
+    <link rel="shortcut icon" href="">
+    <link rel="stylesheet" href="/css/bootplus.min.css">
+    <link rel="stylesheet" href="/css/font-awesome.min.css">
+    <link rel="stylesheet" href="/css/bootstrap-datetimepicker.min.css">
+    <link rel="stylesheet" href="/css/new.css">
+    <link rel="stylesheet" href="/css/bootplus-responsive.min.css">
+    
+    <!--[if IE]>
+        <script src="https://cdn.jsdelivr.net/html5shiv/3.7.2/html5shiv.min.js"></script>
+        <script src="https://cdn.jsdelivr.net/respond/1.4.2/respond.min.js"></script>
+    <![endif]-->
+</head>
+
+<body>
+    <div class="navbar navbar-fixed-top">
+        <div class="navbar-inner">
+            <div class="container">
+                <button type="button" class="btn btn-navbar" data-toggle="collapse" data-target=".nav-collapse">
+                    <span class="icon-bar"></span>
+                    <span class="icon-bar"></span>
+                    <span class="icon-bar"></span>
+                </button>
+                <a class="brand" href="#">排名优化</a>
+                <div class="nav-collapse collapse">
+                    <ul class="nav pull-right">
+                        <li class="pull-right">
+                            <a href="#">用户/<span class="badge badge-info">{{.User.UserName}}</span></a>
+                        </li>
+						 <li class="pull-right">
+                            <a href="#">充值/<span class="badge badge-success">{{.Result.Total}}</span></a>
+                        </li>
+						 <li class="pull-right">
+                            <a href="#">余额(元)/<span class="badge badge-important">{{.Money}}</span></a>
+                        </li> 						  					
+                        <li class="pull-right">
+                            <a href="/logout">退出</a>
+                        </li>                      
+                    </ul>                   
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="container">
+        <div class="row">
+            <div class="span3 bs-docs-sidenav">
+                <ul class="nav nav-list bs-docs-sidenav affix">
+
+                    {{range .Menu}}
+                    <li><a href="{{.Name}}">{{.Title}}</a>
+                    </li>
+                    {{end}}
+                </ul>
+            </div>          
+            <div class="span9">
+                <section>
+                    <p class="page-header">充值记录</p>
+                    <ul id="tabs" class="nav nav-tabs" data-tabs="tabs">
+                        <li class="active"><a href="#payList" data-toggle="tab">充值列表</a>
+                        </li>
+                    </ul>
+                    <div id="my-tab-content" class="tab-content">
+                        <div class="tab-pane active" id="payList">
+                            <table class="table table-hover">
+                                <thead>
+                                    <tr>
+                                        <th>id</th>
+                                        <th>用户ID</th>
+                                        <th>金额</th>
+                                        <th>备注</th>
+                                        <th>时间</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {{range .Result.RankPayLogs}}
+                                        <tr>
+                                           <td>{{.Id}}</td>
+                                            <td>{{.User.Id}}</td>
+                                            <td>{{.Balance}}</td>
+                                            <td>{{.Remark}}</td>
+											  <td>{{.Logtime}}</td>
+                                        </tr>
+                                    {{end}}                                   
+
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                    <div class="pagination pagination-right">
+                    {{if gt .Paginator.PageNums 1}}
+                    <ul class="pagination pagination-sm">
+                        {{if .Paginator.HasPrev}}
+                            <li><a href="{{.Paginator.PageLinkFirst}}">第一页</a></li>
+                            <li><a href="{{.Paginator.PageLinkPrev}}">&lt;</a></li>
+                        {{else}}
+                            <li class="disabled"><a>第一页</a></li>
+                            <li class="disabled"><a>&lt;</a></li>
+                        {{end}}
+                        {{range $index, $page := .Paginator.Pages}}
+                            <li {{if $.Paginator.IsActive .}} class="active"{{end}}>
+                                <a href="{{$.Paginator.PageLink $page}}">{{$page}}</a>
+                            </li>
+                        {{end}}
+                        {{if .Paginator.HasNext}}
+                            <li><a href="{{.Paginator.PageLinkNext}}">&gt;</a></li>
+                            <li><a href="{{.Paginator.PageLinkLast}}">尾页</a></li>
+                        {{else}}
+                            <li class="disabled"><a>&gt;</a></li>
+                            <li class="disabled"><a>尾页</a></li>
+                        {{end}}
+                    </ul>
+                    {{end}}
+                    </div>                    
+                </section>
+            </div>
+        </div>                  
+    </div>
+    <script src="/js/jquery-1.8.3.min.js"></script>
+    <script src="/js/bootstrap.min.js"></script>
+    <script src="/js/bootstrap-datetimepicker.min.js"></script>
+    <script src="/js/locales/bootstrap-datetimepicker.zh-CN.js" charset="UTF-8"></script>
+</body>
+
+</html>

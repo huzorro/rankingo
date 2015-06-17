@@ -19,6 +19,7 @@ function callback(json) {
         console.log(json);
         return
     }
-     window.location.assign("/key/show");
+	console.log(json);
+    window.location.assign("/keyshow");
 }
 
