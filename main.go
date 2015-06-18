@@ -165,12 +165,12 @@ func main() {
 		mtn.Get("/paylog", payLogAction)
 		mtn.Get("/consumelog", consumeLogAction)
 
-		//		mtn.Post("/pay", payAdminAction)
+		mtn.Post("/pay", payAdminAction)
 
-		//		mtn.Post("/user/view", viewUserAction)
-		//		mtn.Get("/usersview", viewUsersAction)
-		//		mtn.Post("/user/add", addUserAction)
-		//		mtn.Post("/user/edit", editUserAction)
+		mtn.Post("/user/view", viewUserAction)
+		mtn.Get("/usersview", viewUsersAction)
+		mtn.Post("/user/add", addUserAction)
+		mtn.Post("/user/edit", editUserAction)
 
 	}
 	if *apiPtr {

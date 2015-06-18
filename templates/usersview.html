@@ -1,0 +1,212 @@
+<!DOCTYPE html>
+<html lang="zh">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="">
+    <meta name="author" content="">
+    <title></title>
+    <link rel="shortcut icon" href="">
+    <link rel="stylesheet" href="/css/bootplus.min.css">
+    <link rel="stylesheet" href="/css/font-awesome.min.css">
+    <link rel="stylesheet" href="/css/bootstrap-datetimepicker.min.css">
+    <link rel="stylesheet" href="/css/new.css">
+    <link rel="stylesheet" href="/css/bootplus-responsive.min.css">
+    
+    <!--[if IE]>
+        <script src="https://cdn.jsdelivr.net/html5shiv/3.7.2/html5shiv.min.js"></script>
+        <script src="https://cdn.jsdelivr.net/respond/1.4.2/respond.min.js"></script>
+    <![endif]-->
+</head>
+
+<body>
+    <div class="navbar navbar-fixed-top">
+        <div class="navbar-inner">
+            <div class="container">
+                <button type="button" class="btn btn-navbar" data-toggle="collapse" data-target=".nav-collapse">
+                    <span class="icon-bar"></span>
+                    <span class="icon-bar"></span>
+                    <span class="icon-bar"></span>
+                </button>
+                <a class="brand" href="#">排名优化</a>
+                <div class="nav-collapse collapse">
+                    <ul class="nav pull-right">
+                        <li class="pull-right">
+                            <a href="#">用户/<span class="badge badge-info">{{.User.UserName}}</span></a>
+                        </li>
+						 <li class="pull-right">
+                            <a href="#">用户数/<span class="badge badge-success">{{.Result.Total}}</span></a>
+                        </li>
+						 <li class="pull-right">
+                            <a href="#">余额(元)/<span class="badge badge-important">{{.Money}}</span></a>
+                        </li> 						  					
+                        <li class="pull-right">
+                            <a href="/logout">退出</a>
+                        </li>                      
+                    </ul>                   
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="container">
+        <div class="row">
+            <div class="span3 bs-docs-sidenav">
+                <ul class="nav nav-list bs-docs-sidenav affix">
+
+                    {{range .Menu}}
+                    <li><a href="{{.Name}}">{{.Title}}</a>
+                    </li>
+                    {{end}}
+                </ul>
+            </div>          
+            <div class="span9">
+               <section>
+                    <p class="page-header">添加用户</p>                   
+                    <div id="my-tab-content" class="tab-content">
+                   <div class="navbar-form pull-left">
+                     <input class="span3" type="text" placeholder="用户名" name="userName">
+                     <input class="span3" type="text" placeholder="密码" name="password">
+                     <button class="btn btn-primary" id="addUser">添加</button>
+                   </div>                       
+                   </div>                                           
+               </section>
+						
+                <section>
+                    <p class="page-header">用户管理</p>
+                    <ul id="tabs" class="nav nav-tabs" data-tabs="tabs">
+                        <li class="active"><a href="#userList" data-toggle="tab">用户列表</a>
+                        </li>
+                    </ul>
+                    <div id="my-tab-content" class="tab-content">
+                        <div class="tab-pane active" id="userList">
+                            <table class="table table-hover">
+                                <thead>
+                                    <tr>
+                                        <th>id</th>
+                                        <th>用户名</th>
+                                        <th>密码</th>
+                                        <th>角色</th>
+                                        <th>余额</th>
+                                        <th>关键字</th>
+                                        <th>充值记录</th>
+                                        <th>消费记录</th>										
+                                        <th>充值</th>
+                                        <th>编辑</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {{range .Result.UserRelations}}
+                                        <tr>
+                                           <td>{{.User.Id}}</td>
+                                           <td>{{.User.UserName}}</td>
+                                           <td>{{.User.Password}}</td>
+                                           <td>{{.Role.Name}}</td>
+											 <td>{{.Pay.Balance}}</td>
+											 <td><a href="/keyshow?uid={{.User.Id}}" class="btn btn-primary">{{.KeyN}}</a></td>
+											 <td><a href="/paylog?uid={{.User.Id}}" class="btn btn-primary">查看</a></td>
+											 <td><a href="/consumelog?uid={{.User.Id}}" class="btn btn-primary">查看</a></td>											
+                                           <td><button class="btn btn-primary" name="payment" value="{{.User.Id}}">充值</button></td>                                                                               
+											 <td><button class="btn btn-primary" name="viewUser" value="{{.User.Id}}">编辑</button></td>
+                                           <td></td>                                                                               
+                                        </tr>
+                                    {{end}}                                   
+
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                    <div class="pagination pagination-right">
+                    {{if gt .Paginator.PageNums 1}}
+                    <ul class="pagination pagination-sm">
+                        {{if .Paginator.HasPrev}}
+                            <li><a href="{{.Paginator.PageLinkFirst}}">第一页</a></li>
+                            <li><a href="{{.Paginator.PageLinkPrev}}">&lt;</a></li>
+                        {{else}}
+                            <li class="disabled"><a>第一页</a></li>
+                            <li class="disabled"><a>&lt;</a></li>
+                        {{end}}
+                        {{range $index, $page := .Paginator.Pages}}
+                            <li {{if $.Paginator.IsActive .}} class="active"{{end}}>
+                                <a href="{{$.Paginator.PageLink $page}}">{{$page}}</a>
+                            </li>
+                        {{end}}
+                        {{if .Paginator.HasNext}}
+                            <li><a href="{{.Paginator.PageLinkNext}}">&gt;</a></li>
+                            <li><a href="{{.Paginator.PageLinkLast}}">尾页</a></li>
+                        {{else}}
+                            <li class="disabled"><a>&gt;</a></li>
+                            <li class="disabled"><a>尾页</a></li>
+                        {{end}}
+                    </ul>
+                    {{end}}
+                    </div>                    
+                </section>
+            </div>
+        </div>
+        <!-- Modal //用户编辑 -->
+        <div id="viewUserModal" class="modal hide fade" tabindex="-1" role="dialog" aria-labelledby="myModalLabel" aria-hidden="true">
+            <div class="modal-header">
+                <button type="button" class="close" data-dismiss="modal" aria-hidden="true">×</button>
+                <h3 id="myModalLabel">用户编辑</h3>
+            </div>
+            <div class="modal-body">
+               <input type="hidden" id="id">
+                <label class="input-block-level">
+                    用户名
+                    <input type="text" id="userName" class="input-small">
+                </label>
+                <label class="input-block-level">
+                    密码
+                    <input type="text" id="password" class="input-small">                     
+                </label>
+            </div>
+            <div class="modal-footer">
+                <button class="btn" data-dismiss="modal" aria-hidden="true" id="updateUser">更新</button>
+                <button class="btn" data-dismiss="modal" aria-hidden="true">关闭</button>                
+            </div>
+        </div>
+		
+		<!-- Modal //充值 -->
+        <div id="paymentUserModal" class="modal hide fade" tabindex="-1" role="dialog" aria-labelledby="paymentUserModalLabel" aria-hidden="true">
+            <div class="modal-header">
+                <button type="button" class="close" data-dismiss="modal" aria-hidden="true">×</button>
+                <h3 id="paymentUserModalLabel">充值</h3>
+            </div>
+            <div class="modal-body">
+               <input type="hidden" id="id">
+                <label class="input-block-level">
+                    金额
+                    <input type="text" id="balance" class="input-small">
+                </label>
+                <label class="input-block-level">
+					<input type="radio" name="remark" value="充值" checked>充值<input type="radio" name="remark" value="返点">返点	
+                </label>
+            </div>
+            <div class="modal-footer">
+                <button class="btn" data-dismiss="modal" aria-hidden="true" id="payment">充值</button>
+                <button class="btn" data-dismiss="modal" aria-hidden="true">关闭</button>                
+            </div>
+        </div>
+		<!-- Modal //操作结果反馈 -->
+        <div id="infoModal" class="modal hide fade" tabindex="-1" role="dialog" aria-labelledby="updateModalLabel" aria-hidden="true">
+            <div class="modal-header">
+                <button type="button" class="close" data-dismiss="modal" aria-hidden="true">×</button>
+                <h3 id="updateModalLabel">操作提示</h3>
+            </div>
+            <div class="modal-body">
+               <p></p>
+            </div>
+            <div class="modal-footer">
+                <button class="btn" data-dismiss="modal" aria-hidden="true">关闭</button>                
+            </div>
+        </div>                  
+    </div>
+    <script src="/js/jquery-1.8.3.min.js"></script>
+    <script src="/js/bootstrap.min.js"></script>
+    <script src="/js/bootstrap-datetimepicker.min.js"></script>
+    <script src="/js/locales/bootstrap-datetimepicker.zh-CN.js" charset="UTF-8"></script>
+    <script src="/js/usersview.js"></script>
+</body>
+
+</html>

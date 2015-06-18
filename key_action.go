@@ -41,14 +41,14 @@ type KeyMsg struct {
 type RankPay struct {
 	User    SpStatUser
 	Id      int64
-	Balance string
+	Balance int64
 	Logtime string
 }
 
 type RankPayLog struct {
 	User    SpStatUser
 	Id      int64
-	Balance string
+	Balance int64
 	Remark  string
 	Logtime string
 }
@@ -57,7 +57,7 @@ type RankConsumeLog struct {
 	User    SpStatUser
 	Keyword NormMsg
 	Id      int64
-	Balance string
+	Balance int64
 	Logtime string
 }
 
@@ -82,10 +82,10 @@ type ConsumeLogPageResult struct {
 }
 
 type UserRelation struct {
-	User   *SpStatUser
-	Role   *SpStatRole
-	Access *SpStatAccess
-	Pay    *RankPay
+	User   SpStatUser
+	Role   SpStatRole
+	Access SpStatAccess
+	Pay    RankPay
 	KeyN   int64
 }
 
@@ -252,6 +252,9 @@ func keyShowAction(r *http.Request, w http.ResponseWriter, db *sql.DB, log *log.
 
 	switch user.Access.Rule {
 	case GROUP_PRI_ALL:
+		if uid := r.FormValue("uid"); uid != "" {
+			con = "WHERE uid IN(" + uid + ")"
+		}
 	case GROUP_PRI_ALLOW:
 		con = "WHERE uid IN(" + strings.Join(user.Access.Group, ",") + ")"
 	case GROUP_PRI_BAN:
@@ -703,6 +706,9 @@ func payLogAction(r *http.Request, w http.ResponseWriter, db *sql.DB, log *log.L
 
 	switch user.Access.Rule {
 	case GROUP_PRI_ALL:
+		if uid := r.FormValue("uid"); uid != "" {
+			con = "WHERE uid IN(" + uid + ")"
+		}
 	case GROUP_PRI_ALLOW:
 		con = "WHERE uid IN(" + strings.Join(user.Access.Group, ",") + ")"
 	case GROUP_PRI_BAN:
@@ -816,6 +822,9 @@ func consumeLogAction(r *http.Request, w http.ResponseWriter, db *sql.DB, log *l
 
 	switch user.Access.Rule {
 	case GROUP_PRI_ALL:
+		if uid := r.FormValue("uid"); uid != "" {
+			con = "WHERE uid IN(" + uid + ")"
+		}
 	case GROUP_PRI_ALLOW:
 		con = "WHERE uid IN(" + strings.Join(user.Access.Group, ",") + ")"
 	case GROUP_PRI_BAN:
@@ -965,10 +974,10 @@ func viewUsersAction(r *http.Request, w http.ResponseWriter, db *sql.DB, log *lo
 	details.Page(int(destPn), &result)
 
 	stmtOut, err = db.Prepare(`SELECT a.id, a.username, a.password, a.roleid, a.accessid,  
-			b.name, c.pri_group, c.pri_rule, IFNULL(d.balance, 0) AS money, 
+			b.name, c.pri_rule, IFNULL(d.balance, 0) AS money, 
 			COUNT(e.id) AS number FROM sp_user a LEFT JOIN sp_role b ON a.roleid = b.id 
 			LEFT JOIN sp_access_privilege c  ON a.accessid = c.id 
-			LEFT JOIN rangking_pay d ON a.id = d.uid LEFT JOIN 
+			LEFT JOIN ranking_pay d ON a.id = d.uid LEFT JOIN 
 			ranking_detail e ON a.id = e.uid ` + con + " GROUP BY a.id ORDER BY id DESC LIMIT ?, ?")
 	defer stmtOut.Close()
 	rows, err := stmtOut.Query(cfg.PageSize*(destPn-1), cfg.PageSize)
@@ -981,7 +990,7 @@ func viewUsersAction(r *http.Request, w http.ResponseWriter, db *sql.DB, log *lo
 	for rows.Next() {
 		userRelation = &UserRelation{}
 		if err := rows.Scan(&userRelation.User.Id, &userRelation.User.UserName, &userRelation.User.Password,
-			&userRelation.User.Role.Id, &userRelation.User.Access.Id, &userRelation.Role.Name, &userRelation.Access.Group,
+			&userRelation.Role.Id, &userRelation.Access.Id, &userRelation.Role.Name,
 			&userRelation.Access.Rule, &userRelation.Pay.Balance, &userRelation.KeyN); err != nil {
 			log.Printf("%s", err)
 			http.Redirect(w, r, ERROR_PAGE_NAME, 301)
@@ -1033,19 +1042,14 @@ func editUserAction(r *http.Request, w http.ResponseWriter, db *sql.DB, log *log
 	user.Id, _ = strconv.ParseInt(id, 10, 64)
 	user.UserName, err = url.QueryUnescape(strings.TrimSpace(r.PostFormValue("userName")))
 	user.Password, err = url.QueryUnescape(strings.TrimSpace(r.PostFormValue("password")))
-	roleid, err := url.QueryUnescape(strings.TrimSpace(r.PostFormValue("roleid")))
-	user.Role.Id, _ = strconv.ParseInt(roleid, 10, 64)
-	accessid, err := url.QueryUnescape(strings.TrimSpace(r.PostFormValue("accessid")))
-	user.Access.Id, _ = strconv.ParseInt(accessid, 10, 64)
-
 	if err != nil {
 		log.Printf("post param parse fails %s", err)
 		js, _ := json.Marshal(Status{"201", "操作失败"})
 		return http.StatusOK, string(js)
 	}
-	stmtIn, err := db.Prepare("UPDATE sp_user SET name=?, password=?, roleid=?, accessid=? WHERE id = ?")
+	stmtIn, err := db.Prepare("UPDATE sp_user SET username=?, password=? WHERE id = ?")
 	defer stmtIn.Close()
-	if _, err = stmtIn.Exec(user.UserName, user.Password, user.Role.Id, user.Access.Id, user.Id); err != nil {
+	if _, err = stmtIn.Exec(user.UserName, user.Password, user.Id); err != nil {
 		log.Printf("%s", err)
 		js, _ := json.Marshal(Status{"201", "操作失败"})
 		return http.StatusOK, string(js)
@@ -1062,10 +1066,10 @@ func viewUserAction(r *http.Request, w http.ResponseWriter, db *sql.DB, log *log
 	r.ParseForm()
 	id, err := url.QueryUnescape(strings.TrimSpace(r.PostFormValue("id")))
 	user.Id, _ = strconv.ParseInt(id, 10, 64)
-	stmtOut, err := db.Prepare("SELECT username, password, roleid, accessid FROM sp_user WHERE id = ?")
+	stmtOut, err := db.Prepare("SELECT username, password FROM sp_user WHERE id = ?")
 	defer stmtOut.Close()
 	row := stmtOut.QueryRow(user.Id)
-	err = row.Scan(&user.UserName, &user.Password, &user.Role.Id, &user.Access.Id)
+	err = row.Scan(&user.UserName, &user.Password)
 	if err != nil {
 		log.Printf("%s", err)
 		js, _ := json.Marshal(Status{"201", "操作失败"})

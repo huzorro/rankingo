@@ -62,6 +62,7 @@ CREATE TABLE sp_user (
     logtime timestamp NOT NULL DEFAULT current_timestamp ON update current_timestamp,
     PRIMARY KEY (id)
 )ENGINE=InnoDB DEFAULT CHARSET=utf8
+alter table sp_user modify roleid int NOT NULL DEFAULT 3
 
 INSERT INTO sp_user(username, password, roleid, accessid)  VALUES("root", "admin", 2, 1) 
 
@@ -75,21 +76,22 @@ CREATE TABLE sp_role (
     PRIMARY KEY(id)
 )ENGINE=InnoDB DEFAULT CHARSET=utf8
 
-INSERT INTO sp_role (id, name, privilege, menu) VALUES (1, "匿名用户", 7, 0), (2, "管理员", 1023, 7)
+INSERT INTO sp_role (id, name, privilege, menu) VALUES (1, "匿名用户", 7, 0), (2, "管理员", 32767, 15)
+INSERT INTO sp_role (id, name, privilege, menu) VALUES (3, "普通用户", 1023, 7)
 
 CREATE TABLE sp_node_privilege (
     id int NOT NULL DEFAULT 0,
     name varchar(100) NOT NULL DEFAULT '',
-    node varchar(500) NOT NULL DEFAULT '' comment '1:/login, 2:/login/check, 4:/logout, 8:/key/add, 16:/key/update, 32:/key/show, 64:/key/one, 128:/paylog, 256:/, 512:/consumelog',
+    node varchar(500) NOT NULL DEFAULT '' comment '1:/login, 2:/login/check, 4:/logout, 8:/key/add, 16:/key/update, 32:/key/show, 64:/key/one, 128:/paylog, 256:/, 512:/consumelog, 1024:/usersview, 2048:/user/view, 4096:/user/edit, 8192:/user/add, 16384:/pay',
     logtime timestamp NOT NULL DEFAULT current_timestamp ON update current_timestamp,
     PRIMARY KEY(id)
 )ENGINE=InnoDB DEFAULT CHARSET=utf8
 
 
 
-INSERT INTO sp_node_privilege (id, name, node)  VALUES (1, "登录页", "/login"), (2, "登录验证请求", "/login/check"), (4, "退出登录", "/logout"), (8, "关键字添加", "/key/add"), (16, "关键字更新", "/key/update"), (32, "关键字列表", "/keyshow"), (64, "单个关键字", "/key/one"), (128, "充值记录", "/paylog"), (256, "首页", "/"), (512, "消费记录", "/consumelog")
+INSERT INTO sp_node_privilege (id, name, node)  VALUES (1, "登录页", "/login"), (2, "登录验证请求", "/login/check"), (4, "退出登录", "/logout"), (8, "关键字添加", "/key/add"), (16, "关键字更新", "/key/update"), (32, "关键字列表", "/keyshow"), (64, "单个关键字", "/key/one"), (128, "充值记录", "/paylog"), (256, "首页", "/"), (512, "消费记录", "/consumelog"), (1024, "用户管理", "/usersview"), (2048, "查看用户", "/user/view"), (4096, "更新用户资料", "/user/edit"), (8192, "添加用户", "/user/add"), (16384, "充值", "/pay")
 
-INSERT INTO sp_node_privilege (id, name, node)  VALUES(512, "消费记录", "/consumelog")
+INSERT INTO sp_node_privilege (id, name, node)  VALUES(2048, "查看用户", "/user/view"), (4096, "更新用户资料", "/user/edit"), (8192, "添加用户", "/user/add"), (16384, "充值", "/pay")
 
 
 CREATE TABLE sp_access_privilege (
@@ -115,9 +117,9 @@ CREATE TABLE sp_menu_template (
 )ENGINE=InnoDB DEFAULT CHARSET=utf8
 
 
-INSERT INTO sp_menu_template (id, title, name)  VALUES(1, "关键词管理", "keyshow"), (2, "充值记录", "paylog"), (4, "消费记录", "consumelog")
+INSERT INTO sp_menu_template (id, title, name)  VALUES(1, "关键词管理", "keyshow"), (2, "充值记录", "paylog"), (4, "消费记录", "consumelog"), (8, "用户管理", "usersview")
 
-INSERT INTO sp_menu_template (id, title, name)  VALUES(4, "消费记录", "consumelog")
+INSERT INTO sp_menu_template (id, title, name)  VALUES(8, "用户管理", "usersview")
 
 SELECT a.id, a.username, a.password, a.roleid, b.name, b.privilege, a.accessid, c.group, c.rule FROM sp_user a 
     INNER JOIN sp_role b ON a.roleid = b.id
