@@ -5,6 +5,7 @@ import (
 	"github.com/huzorro/spfactor/sexredis"
 	"io/ioutil"
 	"net/http"
+	"strconv"
 	"time"
 )
 
@@ -36,7 +37,7 @@ func (self *Queue) Get() sexredis.Msg {
 		if err != nil {
 			msg.Err = errors.New("thread queue response fails")
 		} else {
-			msg.Content = string(body)
+			msg.Content, err = strconv.ParseInt(string(body), 10, 64)
 		}
 	}
 	return msg

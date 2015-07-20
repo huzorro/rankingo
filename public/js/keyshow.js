@@ -1,47 +1,47 @@
 
 $(function() {
     $("#addKey").click(function() {
-        $.ajax({  
-         url : "/key/add",    
+        $.ajax({
+         url : "/key/add",
          data : {Keyword:$("input[name=Keyword]").val(), Destlink:$("input[name=Destlink]").val(),
                  KeyCity:$("input[name=KeyCity]").val(), KeyProvince:$("input[name=KeyProvince]").val()},
-         type : "post",  
-         cache : false,  
-         dataType : "json",  
-         success: keyadd  
-         });         
-    });    
+         type : "post",
+         cache : false,
+         dataType : "json",
+         success: keyadd
+         });
+    });
 //    $("#my-tab-content").delegate("button[name=operate]", "click", function() {
 //         console.log($(this).val());
-//        $.ajax({  
-//         url : "/key/one",    
+//        $.ajax({
+//         url : "/key/one",
 //         data : {Id:$(this).val()},
-//         type : "post",  
-//         cache : false,  
-//         dataType : "json",  
-//         success: keyone   
-//         });       
+//         type : "post",
+//         cache : false,
+//         dataType : "json",
+//         success: keyone
+//         });
 //    });
     $("button[name=operate]").click(function() {
          console.log($(this).val() + "Abc");
-        $.ajax({  
-         url : "/key/one",    
+        $.ajax({
+         url : "/key/one",
          data : {Id:$(this).val()},
-         type : "post",  
-         cache : false,  
-         dataType : "json",  
-         success: keyone   
-         });       
-    });    
+         type : "post",
+         cache : false,
+         dataType : "json",
+         success: keyone
+         });
+    });
     $("#updateKey").click(function() {
-        $.ajax({  
-         url : "/key/update",    
-         data : {Id:$("#Id").val(), Owner:$("#Owner").val(), Status:$("input[name=Status]:checked").val()},                 
-         type : "post",  
-         cache : false,  
-         dataType : "json",  
-         success: keyupdate  
-         });         
+        $.ajax({
+         url : "/key/update",
+         data : {Id:$("#Id").val(), Owner:$("#Owner").val(), Status:$("input[name=Status]:checked").val()},
+         type : "post",
+         cache : false,
+         dataType : "json",
+         success: keyupdate
+         });
     });
     $("#infoModal .btn").click(function(){
         location.reload();
@@ -55,7 +55,7 @@ function keyadd(json) {
         $('#infoModal p').text(json.text);
 //        location.reload();
         return
-    }    
+    }
 }
 
 
@@ -65,11 +65,11 @@ function keyupdate(json) {
         $('#infoModal p').text(json.text);
 //        location.reload();
         return
-    }    
+    }
 }
 function keyone(json) {
         console.log("abc");
-        $('#updateKeyModal').modal('toggle');    
+        $('#updateKeyModal').modal('toggle');
         if (json.status !== undefined) {
             $("#keyStatus").html(json.text);
         } else {
@@ -79,7 +79,7 @@ function keyone(json) {
             if (!json.cancel) {
                 htmls.push('<input type="radio" name="Status" value=0 checked>优化<input type="radio" name="Status" value=1>停止');
             } else {
-                htmls.push('<input type="radio" name="Status" value=0>优化<input type="radio" name="Status" value=1 checked>停止');            
+                htmls.push('<input type="radio" name="Status" value=0>优化<input type="radio" name="Status" value=1 checked>停止');
             }
             $("#keyStatus").html(htmls.join(""));
         }

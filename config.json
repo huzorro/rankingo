@@ -9,16 +9,20 @@
 	"Content-Type":"",
 	"Accept":"",
 	"oiRatio":0.1,
-	"nIBase":50,
+	"nIBase":200,
 	"dbtype":"mysql",
 	"dburi":"ranking:woai840511~@tcp(127.0.0.1:3306)/ranking?charset=utf8",
 	"interval":10,
 	"timing":0,
 	"pageSize":5,
+	"owed":-1000,
+	"price":5,
 	"orderApi":"http://api.91cha.com/bdsort",
 	"orderApiKey":"afb4996a6fff43fb8f433a38e472bf19",
 	"indexApi":"http://api.91cha.com/index",
 	"indexApiKey":"75163967617a49899412a1e5e0ae7858",
 	"proxyApi":"",
-	"checkApi":""
+	"CheckApiOschina":"",
+	"CheckApiSogo":"",
+	"CheckApi360":""
 }

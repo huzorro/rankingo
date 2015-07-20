@@ -13,7 +13,7 @@
     <link rel="stylesheet" href="/css/bootstrap-datetimepicker.min.css">
     <link rel="stylesheet" href="/css/new.css">
     <link rel="stylesheet" href="/css/bootplus-responsive.min.css">
-    
+
     <!--[if IE]>
         <script src="https://cdn.jsdelivr.net/html5shiv/3.7.2/html5shiv.min.js"></script>
         <script src="https://cdn.jsdelivr.net/respond/1.4.2/respond.min.js"></script>
@@ -39,12 +39,12 @@
                             <a href="#">关键词/<span class="badge badge-success">{{.Result.Total}}</span></a>
                         </li>
 						 <li class="pull-right">
-                            <a href="#">余额(元)/<span class="badge badge-important">{{.Money}}</span></a>
-                        </li> 						  					
+                            <a href="#">余额(元)/<span class="badge badge-important">{{div .Money 100}}</span></a>
+                        </li>
                         <li class="pull-right">
                             <a href="/logout">退出</a>
-                        </li>                      
-                    </ul>                   
+                        </li>
+                    </ul>
                 </div>
             </div>
         </div>
@@ -59,11 +59,11 @@
                     </li>
                     {{end}}
                 </ul>
-            </div>          
+            </div>
             <div class="span9">
                <section>
                     <p class="page-header">添加关键词</p>
-                   
+
                     <div id="my-tab-content" class="tab-content">
                    <div class="navbar-form pull-left">
                      <input class="span2" type="text" placeholder="关键字" name="Keyword">
@@ -71,8 +71,8 @@
                      <input class="span2" type="text" placeholder="城市(可选项)" name="KeyCity">
                      <input class="span2" type="text" placeholder="省份(可选项)" name="KeyProvince">
                      <button class="btn btn-primary" id="addKey">添加</button>
-                   </div>                       
-                   </div>                                           
+                   </div>
+                   </div>
                </section>
                 <section>
                     <p class="page-header">关键词列表</p>
@@ -110,28 +110,28 @@
 											  {{else}}
 											  <td>{{.COrder}}</td>
 											  {{end}}
-											
+
 											  {{if ge .HOrder 50}}
                                             <td>>{{.HOrder}}</td>
 											  {{else}}
 											  <td>{{.HOrder}}</td>
 											  {{end}}
-											                                      
+
                                             <td>{{.KeyMsg.Owner}}</td>
                                             <td>{{.KeyMsg.Logtime}}</td>
-                                            <td>{{.Cost}}</td>
-                                            {{if  .Cancel | not}}                                            
+                                            <td>{{div .Cost 100}}</td>
+                                            {{if  .Cancel | not}}
                                             <td>
-                                            <i class="icon-play-sign"></i>    
+                                            <i class="icon-play-sign"></i>
                                             </td>
                                             {{else}}
                                             <td>
-                                            <i class="icon-pause"></i>     
-                                            </td>                                            
+                                            <i class="icon-pause"></i>
+                                            </td>
                                             {{end}}
-                                            <td><button class="btn btn-primary" name="operate" value="{{.KeyMsg.Id}}"><i class="icon-external-link"></i></button></td>                                                                               
+                                            <td><button class="btn btn-primary" name="operate" value="{{.KeyMsg.Id}}"><i class="icon-external-link"></i></button></td>
                                         </tr>
-                                    {{end}}                                   
+                                    {{end}}
 
                                 </tbody>
                             </table>
@@ -161,7 +161,7 @@
                         {{end}}
                     </ul>
                     {{end}}
-                    </div>                    
+                    </div>
                 </section>
             </div>
         </div>
@@ -180,13 +180,13 @@
                 <label class="input-block-level">
                     当前状态
                     <span id="keyStatus">
-                     
+
                     </span>
                 </label>
             </div>
             <div class="modal-footer">
                 <button class="btn" data-dismiss="modal" aria-hidden="true" id="updateKey">更新</button>
-                <button class="btn" data-dismiss="modal" aria-hidden="true">关闭</button>                
+                <button class="btn" data-dismiss="modal" aria-hidden="true">关闭</button>
             </div>
         </div>
         <div id="infoModal" class="modal hide fade" tabindex="-1" role="dialog" aria-labelledby="updateModalLabel" aria-hidden="true">
@@ -198,9 +198,9 @@
                <p></p>
             </div>
             <div class="modal-footer">
-                <button class="btn" data-dismiss="modal" aria-hidden="true">关闭</button>                
+                <button class="btn" data-dismiss="modal" aria-hidden="true">关闭</button>
             </div>
-        </div>                  
+        </div>
     </div>
     <script src="/js/jquery-1.8.3.min.js"></script>
     <script src="/js/bootstrap.min.js"></script>

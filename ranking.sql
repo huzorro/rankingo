@@ -132,8 +132,13 @@ CREATE TABLE ranking_pay (
     uid int NOT NULL DEFAULT 0,
     balance int NOT NULL DEFAULT 0,
     logtime  timestamp NOT NULL DEFAULT current_timestamp ON UPDATE current_timestamp,
-    PRIMARY KEY(id)
+    PRIMARY KEY(id),
+    UNIQUE KEY uk_pay_uid (uid)
 )ENGINE=InnoDB DEFAULT CHARSET=utf8
+
+alter table ranking_pay add constraint uk_pay_uid unique (uid);
+ALTER TABLE ranking_pay DEFAULT CHARACTER SET utf8 COLLATE utf8_general_ci;
+UPDATE ranking_pay SET balance = balance - ? WHERE uid IN (SELECT uid FROM ranking_detail WHERE keyword = ? AND destlink = ?)
 
 INSERT INTO ranking_pay(uid, balance) VALUES(1, 1200)
 

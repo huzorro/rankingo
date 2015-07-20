@@ -21,15 +21,8 @@ type NormMsg struct {
 }
 
 type ProxyMsg struct {
-	Ip        string `json:"ip"`
-	Port      string `json:"port"`
-	Country   string `json:"country"`
-	Province  string `json:"province"`
-	City      string `json:"city"`
-	Isp       string `json:"isp"`
-	Type      string `json:"type"`
-	Level     int64  `json:"level"`
-	CheckTime int64  `json:"checkTime"`
+	Ip   string `json:"ip"`
+	Port string `json:"port"`
 }
 
 type TaskMsg struct {

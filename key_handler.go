@@ -4,9 +4,11 @@ import (
 	"database/sql"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"github.com/huzorro/spfactor/sexredis"
 	"io/ioutil"
 	"log"
+	"math"
 	"net/url"
 	"strconv"
 	"strings"
@@ -57,6 +59,13 @@ type Payoff struct {
 	db  *sql.DB
 }
 
+//正态分布
+type NormCreate struct {
+	c   *Cfg
+	log *log.Logger
+	db  *sql.DB
+}
+
 //优化日志
 type OrderLog struct {
 	c   *Cfg
@@ -83,6 +92,11 @@ type IndexResult struct {
 		Mobileindex int64  `json:"mobileindex"`
 		So360index  int64  `json:"so360index"`
 	} `json:"data"`
+}
+type Payment struct {
+	c   *Cfg
+	log *log.Logger
+	db  *sql.DB
 }
 
 func (self *Order) SProcess(msg *sexredis.Msg) {
@@ -133,6 +147,9 @@ func (self *Order) SProcess(msg *sexredis.Msg) {
 			}
 		}
 	}
+	if normsg.HOrder == 0 {
+		normsg.HOrder = co
+	}
 	normsg.COrder = co
 	normsg.KeyMsg = keymsg
 	msg.Content = normsg
@@ -171,10 +188,112 @@ func (self *Index) SProcess(msg *sexredis.Msg) {
 		time.Sleep(3000 * time.Millisecond)
 	}
 	self.log.Printf("%+v", ir)
+	if m.HIndex == 0 {
+		m.HIndex = ir.Data[0].Allindex
+	}
 	m.CIndex = ir.Data[0].Allindex
 	msg.Content = m
 }
 
+//首页按天计费
+func (self *Payment) SProcess(msg *sexredis.Msg) {
+	self.log.Printf("payment for keyword")
+	m := msg.Content.(NormMsg)
+	if m.KeyMsg.Status == RANKING_STATUS_CANCEL {
+		return
+	}
+	//欠费超过设定容忍度,取消优化
+	stmtOut, err := self.db.Prepare("SELECT balance FROM ranking_pay WHERE uid IN(?)")
+	defer stmtOut.Close()
+	if err != nil {
+		self.log.Printf("db.Prepare fails %s", err)
+		msg.Err = errors.New("db.Prepare fails")
+		return
+	}
+	row := stmtOut.QueryRow(m.KeyMsg.Uid)
+	var balance int64
+	if err := row.Scan(&balance); err != nil {
+		self.log.Printf("row.Scan fails %s", err)
+		msg.Err = errors.New("row.Scan fails")
+		return
+	}
+	if balance > self.c.Owed {
+		m.KeyMsg.Status = RANKING_STATUS_CANCEL
+	}
+
+	//根据指数和单价计算费用
+	if m.CIndex < self.c.NIBase {
+		m.CIndex = self.c.NIBase
+	}
+	m.Cost = m.CIndex * self.c.Price
+	msg.Content = m
+	if m.COrder > 10 {
+		return
+	}
+
+	tx, err := self.db.Begin()
+	if err != nil {
+		self.log.Printf("tx begin fails %s", err)
+		msg.Err = errors.New("tx begin fails")
+		return
+	}
+
+	stmtIn, err := tx.Prepare(`UPDATE ranking_pay SET balance = balance - ? WHERE uid IN(?)`)
+	defer stmtIn.Close()
+	if err != nil {
+		self.log.Printf("tx.Prepare fails %s", err)
+		msg.Err = errors.New("tx.Prepare fails")
+		return
+	}
+
+	_, err = stmtIn.Exec(m.Cost, m.KeyMsg.Uid)
+	if err != nil {
+		tx.Rollback()
+		self.log.Printf("exec sql fails %s", err)
+		msg.Err = errors.New("exec sql fails")
+		return
+	}
+	//记录消费记录
+	stmtInPayLog, err := tx.Prepare(`INSERT INTO ranking_consume_log(uid, kid, balance) VALUES(?, ?, ?)`)
+	defer stmtInPayLog.Close()
+	if err != nil {
+		self.log.Printf("tx.Prepare fails %s", err)
+		msg.Err = errors.New("tx.Prepare fails")
+		return
+	}
+	_, err = stmtInPayLog.Exec(m.KeyMsg.Uid, m.KeyMsg.Id, m.Cost)
+	if err != nil {
+		tx.Rollback()
+		self.log.Printf("exec sql fails %s", err)
+		msg.Err = errors.New("exec sql fails")
+		return
+	}
+
+	if err := tx.Commit(); err != nil {
+		tx.Rollback()
+		self.log.Printf("tx.Commit fails %s", err)
+		msg.Err = errors.New("tx.Commit fails %s")
+		return
+	}
+
+}
+
+//按时间段生成正态分布数据
+func (self *NormCreate) SProcess(msg *sexredis.Msg) {
+	//msg type ok?
+	m := msg.Content.(NormMsg)
+	m.Hour = make(map[string]int64)
+	//生成24小时的正态分布数据 样本数量1000
+	nt := normByTime(-1.2, 1.2, 0.1, 1000)
+	for k, v := range nt {
+		m.Hour[fmt.Sprint(k)] = int64(math.Floor(float64(m.CIndex) * v))
+	}
+	msg.Content = m
+}
+
+//正态分布数据置入队列
+//没有地区信息的正态分布数据放入 norm_common_queue
+//带有地区信息的正态分布数据放入 norm_area_queue
 func (self *PutIn) SProcess(msg *sexredis.Msg) {
 	var (
 		js []byte
@@ -197,28 +316,40 @@ func (self *PutIn) SProcess(msg *sexredis.Msg) {
 		self.log.Printf("the keyword is cancel and not put in")
 		return
 	}
-	if _, err := rc.RPush(RANKING_NORM_QUEUE, js); err != nil {
-		self.log.Printf("put msg in queue fails %s", err)
-		msg.Err = errors.New("put msg in queue fails")
-		return
+	if m.KeyMsg.KeyCity != "" || m.KeyMsg.KeyProvince != "" {
+		if _, err := rc.RPush(RANKING_AREA_NORM_QUEUE, js); err != nil {
+			self.log.Printf("put msg in queue fails %s", err)
+			msg.Err = errors.New("put msg in queue fails")
+			return
+		}
+		self.log.Printf("put msg in %s", RANKING_AREA_NORM_QUEUE)
+	} else {
+		if _, err := rc.RPush(RANKING_COMMON_NORM_QUEUE, js); err != nil {
+			self.log.Printf("put msg in queue fails %s", err)
+			msg.Err = errors.New("put msg in queue fails")
+			return
+		}
+		self.log.Printf("put msg in %s", RANKING_COMMON_NORM_QUEUE)
 	}
-	self.log.Printf("put msg in %s", RANKING_NORM_QUEUE)
+
 }
 
 func (self *Recoder) SProcess(msg *sexredis.Msg) {
 	//msg type ok?
 	m := msg.Content.(NormMsg)
-	stmtIn, err := self.db.Prepare(`REPLACE INTO ranking_detail(id, uid, owner, keyword, destlink, history_order, 
+	stmtIn, err := self.db.Prepare(`INSERT INTO ranking_detail(id, uid, owner, keyword, destlink, history_order, 
 	current_order, history_index, current_index, city_key, province_key, cost, status, logtime) 
-	VALUES(?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`)
+	VALUES(?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?) ON DUPLICATE KEY UPDATE 
+	current_order = VALUES(current_order), current_index = VALUES(current_index), cost = VALUES(cost)`)
+
 	defer stmtIn.Close()
 	if err != nil {
 		self.log.Printf("db.Prepare fails %s", err)
 		msg.Err = errors.New("db.Prepare fails")
 		return
 	}
-	if _, err := stmtIn.Exec(m.KeyMsg.Id, m.KeyMsg.Uid, m.KeyMsg.Owner, m.KeyMsg.Keyword, m.KeyMsg.Destlink, m.COrder, m.COrder,
-		m.CIndex, m.CIndex, m.KeyMsg.KeyCity, m.KeyMsg.KeyProvince, m.Cost, m.KeyMsg.Status, m.KeyMsg.Logtime); err != nil {
+	if _, err := stmtIn.Exec(m.KeyMsg.Id, m.KeyMsg.Uid, m.KeyMsg.Owner, m.KeyMsg.Keyword, m.KeyMsg.Destlink, m.HOrder, m.COrder,
+		m.HIndex, m.CIndex, m.KeyMsg.KeyCity, m.KeyMsg.KeyProvince, m.Cost, m.KeyMsg.Status, m.KeyMsg.Logtime); err != nil {
 		self.log.Printf("stmtIn.Exec fails %s", err)
 		msg.Err = errors.New("stmtIn.Exec fails")
 		return
@@ -242,8 +373,8 @@ func (self *OrderLog) SProcess(msg *sexredis.Msg) {
 		msg.Err = errors.New("db.Prepare fails")
 		return
 	}
-	if _, err := stmtIn.Exec(m.KeyMsg.Id, m.KeyMsg.Uid, m.KeyMsg.Owner, m.KeyMsg.Keyword, m.KeyMsg.Destlink, m.COrder, m.COrder,
-		m.CIndex, m.CIndex, m.KeyMsg.KeyCity, m.KeyMsg.KeyProvince, m.Cost, m.KeyMsg.Logtime); err != nil {
+	if _, err := stmtIn.Exec(m.KeyMsg.Id, m.KeyMsg.Uid, m.KeyMsg.Owner, m.KeyMsg.Keyword, m.KeyMsg.Destlink, m.HOrder, m.COrder,
+		m.HIndex, m.CIndex, m.KeyMsg.KeyCity, m.KeyMsg.KeyProvince, m.Cost, m.KeyMsg.Status, m.KeyMsg.Logtime); err != nil {
 		self.log.Printf("stmtIn.Exec fails %s", err)
 		msg.Err = errors.New("stmtIn.Exec fails")
 		return

@@ -3,6 +3,7 @@ package main
 import (
 	"database/sql"
 	"encoding/json"
+	"fmt"
 	"github.com/huzorro/spfactor/sexredis"
 	"github.com/martini-contrib/render"
 	"github.com/martini-contrib/sessions"
@@ -554,6 +555,22 @@ func keyAddAction(r *http.Request, w http.ResponseWriter, db *sql.DB, log *log.L
 	return http.StatusOK, string(js)
 }
 
+func taskNumberApi(r *http.Request, w http.ResponseWriter, log *log.Logger,
+	redisPool *sexredis.RedisPool, cfg *Cfg) (int, string) {
+	redisClient, err := redisPool.Get()
+	defer redisPool.Close(redisClient)
+	if err != nil {
+		log.Printf("get connection of redis pool fails %s", err)
+		return http.StatusOK, "0"
+	}
+	if n, err := redisClient.LLen(RANKING_TASK_QUEUE); err != nil {
+		return http.StatusOK, "0"
+	} else {
+		return http.StatusOK, strconv.FormatInt(n, 10)
+	}
+
+}
+
 func taskOneApi(r *http.Request, w http.ResponseWriter, log *log.Logger,
 	redisPool *sexredis.RedisPool, cfg *Cfg) (int, string) {
 	redisClient, err := redisPool.Get()
@@ -577,7 +594,8 @@ func taskOneApi(r *http.Request, w http.ResponseWriter, log *log.Logger,
 			js, _ := json.Marshal(Status{"201", "操作失败"})
 			return http.StatusOK, string(js)
 		}
-		h := time.Now().Format("15")
+		h := fmt.Sprint(time.Now().Hour())
+
 		msg.NormMsg.Hour[h] = msg.NormMsg.Hour[h] - 1
 		js, _ := json.Marshal(msg)
 		if _, err := redisClient.RPush(RANKING_TASK_QUEUE, js); err != nil {
@@ -646,7 +664,7 @@ func payAdminAction(r *http.Request, w http.ResponseWriter, db *sql.DB,
 		js, _ := json.Marshal(Status{"201", "操作失败"})
 		return http.StatusOK, string(js)
 	}
-	_, err = stmtInLog.Exec(uid, balance, r.PostFormValue("remark"))
+	_, err = stmtInLog.Exec(uid, balance*100, r.PostFormValue("remark"))
 	if err != nil {
 		tx.Rollback()
 		log.Printf("insert into ranking pay log fails %s", err)
@@ -660,7 +678,7 @@ func payAdminAction(r *http.Request, w http.ResponseWriter, db *sql.DB,
 		js, _ := json.Marshal(Status{"201", "操作失败"})
 		return http.StatusOK, string(js)
 	}
-	if _, err := stmtInPay.Exec(uid, balance); err != nil {
+	if _, err := stmtInPay.Exec(uid, balance*100); err != nil {
 		tx.Rollback()
 		log.Printf("insert into ranking pay fails %s", err)
 		js, _ := json.Marshal(Status{"201", "操作失败"})
@@ -1007,7 +1025,7 @@ func viewUsersAction(r *http.Request, w http.ResponseWriter, db *sql.DB, log *lo
 	}
 	paginator := NewPaginator(r, cfg.PageSize, totalN)
 	//余额
-	stmtOutPay, err := db.Prepare("SELECT SUM(balance) FROM ranking_pay " + con)
+	stmtOutPay, err := db.Prepare("SELECT IFNULL(SUM(balance), 0) FROM ranking_pay " + con)
 	defer stmtOutPay.Close()
 	if err != nil {
 		log.Printf("%s", err)

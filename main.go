@@ -14,9 +14,11 @@ import (
 	"github.com/huzorro/woplus/tools"
 	"github.com/martini-contrib/render"
 	"github.com/martini-contrib/sessions"
+	"html/template"
 	"log"
 	"net/http"
 	"os"
+	"runtime"
 )
 
 type Cfg struct {
@@ -53,16 +55,21 @@ type Cfg struct {
 	//页宽
 	PageSize int64 `json:"pageSize"`
 	//欠费容忍度 例如余额小于 < -1000
+	Owed int64 `json:"owed"`
 	//计费规则 当月在首页次数超过的天数 > 3 则扣除当月费用
 	//价格计算规则 起步价开始的指数 例如200指数以内的设定一个起步价
+	//单个指数的价格以分为单位
+	Price int64 `json:"price"`
 	//价格计算规则 超过起步价指数的单价
 
-	OrderApi    string `json:"orderApi"`
-	OrderApiKey string `json:"orderApiKey"`
-	IndexApi    string `json:"indexApi"`
-	IndexApiKey string `json:"indexApiKey"`
-	ProxyApi    string `json:"proxyApi"`
-	CheckApi    string `json:"checkApi"`
+	OrderApi        string `json:"orderApi"`
+	OrderApiKey     string `json:"orderApiKey"`
+	IndexApi        string `json:"indexApi"`
+	IndexApiKey     string `json:"indexApiKey"`
+	ProxyApi        string `json:"proxyApi"`
+	CheckApiOschina string `json:"checkApiOschina"`
+	CheckApiSogou   string `json:"checkApiSogou"`
+	CheckApi360     string `json:checkApi360"`
 }
 
 type TaskResultMsg struct {
@@ -78,6 +85,7 @@ type ResultMsg struct {
 }
 
 func main() {
+	runtime.GOMAXPROCS(16)
 
 	portPtr := flag.String("port", ":10086", "service port")
 	redisIdlePtr := flag.Int("redis", 20, "redis idle connections")
@@ -143,6 +151,7 @@ func main() {
 	//render
 	rOptions := render.Options{}
 	rOptions.Extensions = []string{".tmpl", ".html"}
+	rOptions.Funcs = []template.FuncMap{funcMaps}
 	mtn.Use(render.Renderer(rOptions))
 
 	mtn.Map(&cfg)
@@ -176,6 +185,7 @@ func main() {
 	if *apiPtr {
 		mtn.Get("/api/task/one", taskOneApi)
 		mtn.Post("/api/task/result", taskResultApi)
+		mtn.Get("/api/task/number", taskNumberApi)
 	}
 	if *webPtr || *apiPtr {
 		go http.ListenAndServe(*portPtr, mtn)
@@ -190,8 +200,10 @@ func main() {
 		}
 		queue := sexredis.New()
 		queue.SetRClient(RANKING_KEYWORD_QUEUE, rc)
+		log.Printf("key handler start.....")
 		queue.Worker(2, true, &Order{&cfg, logger, redisPool}, &Index{&cfg, logger, redisPool},
-			&PutIn{&cfg, logger, redisPool}, &Recoder{&cfg, logger, db})
+			&Payment{&cfg, logger, db}, &NormCreate{&cfg, logger, db},
+			&PutIn{&cfg, logger, redisPool}, &Recoder{&cfg, logger, db}, &OrderLog{&cfg, logger, db})
 	}
 
 	if *normHandlerPtr {
@@ -242,7 +254,8 @@ func main() {
 		queue := area.New()
 		queue.Task = taskQueue
 		queue.Area = areaQueue
-		queue.Worker(2, true, &AreaProxy{&cfg, logger, redisPool})
+		queue.Worker(2, true, &AreaProxyKuaidaili{&cfg, logger, redisPool},
+			&TaskQueuePutIn{&cfg, logger, redisPool})
 	}
 
 	if *proxyHandlerPtr {
@@ -254,7 +267,10 @@ func main() {
 		}
 		taskQueue := task.New()
 		taskQueue.SetRClient(RANKING_TASK_QUEUE, taskRc)
-		taskQueue.Worker(2, true, &ProxyGet{&cfg, logger, redisPool})
+		taskQueue.Worker(2, true, &ProxyGetKuaidaili{&cfg, logger, redisPool},
+			&ProxyCheck360{&cfg, logger, redisPool},
+			&ProxyCheckSogou{&cfg, logger, redisPool},
+			&ProxyQueuePutIn{&cfg, logger, redisPool})
 	}
 	if *threadHandlerPtr {
 		rc, err := redisPool.Get()
