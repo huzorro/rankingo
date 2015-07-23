@@ -12,7 +12,9 @@ type Queue struct {
 }
 
 func New() *Queue {
-	return new(Queue)
+	q := new(Queue)
+	q.Msgchan = make(chan sexredis.Msg)
+	return q
 }
 func (self *Queue) Get() sexredis.Msg {
 	if n, err := self.LLen(); err == nil {
@@ -23,7 +25,7 @@ func (self *Queue) Get() sexredis.Msg {
 }
 
 func (self *Queue) Consume() {
-	self.Msgchan = make(chan sexredis.Msg)
+	//	self.Msgchan = make(chan sexredis.Msg)
 	for {
 		msg := self.Get()
 		if n, ok := msg.Content.(int64); ok && n == 0 {

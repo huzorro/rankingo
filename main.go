@@ -116,6 +116,7 @@ func main() {
 		mtn       *martini.ClassicMartini
 		redisPool *sexredis.RedisPool
 		db        *sql.DB
+		err       error
 	)
 	if err := tools.Json2Struct(*cfgPathPtr, &cfg); err != nil {
 		log.Printf("load json config fails %s", err)
@@ -125,19 +126,19 @@ func main() {
 	logger := log.New(os.Stdout, "\r\n", log.Ldate|log.Ltime|log.Lshortfile)
 
 	if !*adslPtr && !*threadHandlerPtr {
-		redisPool := &sexredis.RedisPool{make(chan *redis.Client, *redisIdlePtr), func() (*redis.Client, error) {
+		redisPool = &sexredis.RedisPool{make(chan *redis.Client, *redisIdlePtr), func() (*redis.Client, error) {
 			client := redis.New()
 			err := client.Connect("localhost", uint(6379))
 			return client, err
 		}}
-		db, err := sql.Open(cfg.Dbtype, cfg.Dburi)
+		db, err = sql.Open(cfg.Dbtype, cfg.Dburi)
 		db.SetMaxOpenConns(*dbMaxPtr)
 
 		if err != nil {
 			panic(err.Error()) // Just for example purpose. You should use proper error handling instead of panic
 		}
 
-		mtn := martini.Classic()
+		mtn = martini.Classic()
 
 		mtn.Map(logger)
 		mtn.Map(redisPool)
@@ -216,7 +217,7 @@ func main() {
 		queue := sexredis.New()
 		queue.SetRClient(RANKING_KEYWORD_QUEUE, rc)
 		logger.Printf("key handler start.....")
-		queue.Worker(2, true, &Order{&cfg, logger, redisPool}, &Index{&cfg, logger, redisPool},
+		queue.Worker(5, true, &Order{&cfg, logger, redisPool}, &Index{&cfg, logger, redisPool},
 			&Payment{&cfg, logger, db}, &NormCreate{&cfg, logger, db},
 			&PutInTask{&cfg, logger, redisPool}, &Recoder{&cfg, logger, db}, &OrderLog{&cfg, logger, db})
 	}

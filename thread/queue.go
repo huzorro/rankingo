@@ -21,10 +21,13 @@ type Queue struct {
 	adslUser   string
 	adslPasswd string
 	sexredis.Queue
+	Msgchan chan sexredis.Msg
 }
 
 func New() *Queue {
-	return new(Queue)
+	q := new(Queue)
+	q.Msgchan = make(chan sexredis.Msg)
+	return q
 }
 func (self *Queue) SetRequestUri(uri string) {
 	self.uri = uri
@@ -59,7 +62,7 @@ func (self *Queue) Get() sexredis.Msg {
 use channel implement like python yield
 */
 func (self *Queue) Consume() {
-	self.Msgchan = make(chan sexredis.Msg)
+	//	self.Msgchan = make(chan sexredis.Msg)
 	for {
 		msg := self.Get()
 		if n, ok := msg.Content.(int64); ok && n > 0 {
