@@ -33,12 +33,19 @@ type Index struct {
 	p   *sexredis.RedisPool
 }
 
+//放入norm队列
 type PutIn struct {
 	c   *Cfg
 	log *log.Logger
 	p   *sexredis.RedisPool
 }
 
+//放入task队列
+type PutInTask struct {
+	c   *Cfg
+	log *log.Logger
+	p   *sexredis.RedisPool
+}
 type Recoder struct {
 	c   *Cfg
 	log *log.Logger
@@ -121,7 +128,11 @@ func (self *Order) SProcess(msg *sexredis.Msg) {
 	self.log.Printf("%s", self.c.OrderApi+"?"+query)
 	for {
 		resp, err := HttpGet(self.c.OrderApi + "?" + query)
-		defer resp.Body.Close()
+		defer func() {
+			if resp != nil {
+				resp.Body.Close()
+			}
+		}()
 		if err != nil {
 			msg.Err = errors.New("get order fails")
 			self.log.Printf("get order fails %s", err)
@@ -333,7 +344,39 @@ func (self *PutIn) SProcess(msg *sexredis.Msg) {
 	}
 
 }
+func (self *PutInTask) SProcess(msg *sexredis.Msg) {
+	var (
+		js []byte
+	)
+	//msg type ok?
+	m := msg.Content.(NormMsg)
+	rc, err := self.p.Get()
+	defer self.p.Close(rc)
+	if err != nil {
+		self.log.Printf("get redis connection fails %s", err)
+		msg.Err = errors.New("get redis connection fails")
+		return
+	}
 
+	if m.KeyMsg.Status == RANKING_STATUS_CANCEL {
+		self.log.Printf("the keyword is cancel and not put in")
+		return
+	}
+	taskMsg := TaskMsg{NormMsg: m}
+	taskMsg.InitTime = time.Now().UnixNano() / (1000 * 1000)
+
+	if js, err = json.Marshal(taskMsg); err != nil {
+		self.log.Printf("Marshal json fails %s", err)
+		msg.Err = errors.New("Marshal json fails")
+		return
+	}
+	if _, err := rc.RPush(RANKING_TASK_QUEUE, js); err != nil {
+		self.log.Printf("put msg in queue fails %s", err)
+		msg.Err = errors.New("put msg in queue fails")
+		return
+	}
+	self.log.Printf("put msg in %s", RANKING_TASK_QUEUE)
+}
 func (self *Recoder) SProcess(msg *sexredis.Msg) {
 	//msg type ok?
 	m := msg.Content.(NormMsg)

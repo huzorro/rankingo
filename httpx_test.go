@@ -31,8 +31,8 @@ func TestHttpGet(t *testing.T) {
 	} else {
 		fmt.Println("proxy unable")
 	}
-	html := doc.Text()
-	fmt.Println(html)
+	//	html := doc.Text()
+	//	fmt.Println(html)
 	fmt.Println("编码测试")
 }
 
@@ -59,15 +59,15 @@ func TestHttpGetSogou(t *testing.T) {
 	} else {
 		fmt.Println("proxy unable")
 	}
-	html := doc.Text()
-	fmt.Println(html)
+	//	html := doc.Text()
+	//	fmt.Println(html)
 	fmt.Println("编码测试")
 }
 
 func TestHttpGet360(t *testing.T) {
-	//	resp, err := HttpGet("https://www.haosou.com")
+	resp, err := HttpGet("https://www.haosou.com")
 	//		resp, _ := HttpGet("http://ip138.com")
-	resp, err := HttpGetFromProxy("https://www.haosou.com", "https://163.125.196.79:9797")
+	//	resp, err := HttpGetFromProxy("https://www.haosou.com", "https://163.125.196.79:9797")
 	if err != nil {
 		fmt.Println(err)
 	}
@@ -87,7 +87,7 @@ func TestHttpGet360(t *testing.T) {
 	} else {
 		fmt.Println("proxy unable")
 	}
-	html := doc.Text()
-	fmt.Println(html)
+	//	html := doc.Text()
+	//	fmt.Println(html)
 	fmt.Println("编码测试")
 }

@@ -19,6 +19,8 @@ import (
 	"net/http"
 	"os"
 	"runtime"
+	"strings"
+	"time"
 )
 
 type Cfg struct {
@@ -69,7 +71,10 @@ type Cfg struct {
 	ProxyApi        string `json:"proxyApi"`
 	CheckApiOschina string `json:"checkApiOschina"`
 	CheckApiSogou   string `json:"checkApiSogou"`
-	CheckApi360     string `json:checkApi360"`
+	CheckApi360     string `json:"checkApi360"`
+	AdslCName       string `json:"adslCName"`
+	AdslUser        string `json:"adslUser"`
+	AdslPasswd      string `json:"adslPasswd"`
 }
 
 type TaskResultMsg struct {
@@ -101,11 +106,17 @@ func main() {
 	areaHandlerPtr := flag.Bool("area", false, "area norm handler start")
 	proxyHandlerPtr := flag.Bool("proxy", false, "common proxy handler start")
 	threadHandlerPtr := flag.Bool("thread", false, "thread control handler start")
-
+	adslPtr := flag.Bool("adsl", false, "adsl connect")
+	regularPtr := flag.Bool("regular", false, "regular task start")
 	flag.Parse()
 
 	//json config
-	var cfg Cfg
+	var (
+		cfg       Cfg
+		mtn       *martini.ClassicMartini
+		redisPool *sexredis.RedisPool
+		db        *sql.DB
+	)
 	if err := tools.Json2Struct(*cfgPathPtr, &cfg); err != nil {
 		log.Printf("load json config fails %s", err)
 		panic(err.Error())
@@ -113,48 +124,50 @@ func main() {
 
 	logger := log.New(os.Stdout, "\r\n", log.Ldate|log.Ltime|log.Lshortfile)
 
-	redisPool := &sexredis.RedisPool{make(chan *redis.Client, *redisIdlePtr), func() (*redis.Client, error) {
-		client := redis.New()
-		err := client.Connect("localhost", uint(6379))
-		return client, err
-	}}
-	db, err := sql.Open(cfg.Dbtype, cfg.Dburi)
-	db.SetMaxOpenConns(*dbMaxPtr)
+	if !*adslPtr && !*threadHandlerPtr {
+		redisPool := &sexredis.RedisPool{make(chan *redis.Client, *redisIdlePtr), func() (*redis.Client, error) {
+			client := redis.New()
+			err := client.Connect("localhost", uint(6379))
+			return client, err
+		}}
+		db, err := sql.Open(cfg.Dbtype, cfg.Dburi)
+		db.SetMaxOpenConns(*dbMaxPtr)
 
-	if err != nil {
-		panic(err.Error()) // Just for example purpose. You should use proper error handling instead of panic
+		if err != nil {
+			panic(err.Error()) // Just for example purpose. You should use proper error handling instead of panic
+		}
+
+		mtn := martini.Classic()
+
+		mtn.Map(logger)
+		mtn.Map(redisPool)
+		mtn.Map(db)
+
+		cache := &Cache{db, redisPool}
+		mtn.Map(cache)
+		//	load rbac node
+		if nMap, err := cache.RbacNodeToMap(); err != nil {
+			logger.Printf("rbac node to map fails %s", err)
+		} else {
+			mtn.Map(nMap)
+		}
+		//load rbac menu
+		if ms, err := cache.RbacMenuToSlice(); err != nil {
+			logger.Printf("rbac menu to slice fails %s", err)
+		} else {
+			mtn.Map(ms)
+		}
+		//session
+		store := sessions.NewCookieStore([]byte("secret123"))
+		mtn.Use(sessions.Sessions("Qsession", store))
+		//render
+		rOptions := render.Options{}
+		rOptions.Extensions = []string{".tmpl", ".html"}
+		rOptions.Funcs = []template.FuncMap{funcMaps}
+		mtn.Use(render.Renderer(rOptions))
+
+		mtn.Map(&cfg)
 	}
-
-	mtn := martini.Classic()
-
-	mtn.Map(logger)
-	mtn.Map(redisPool)
-	mtn.Map(db)
-
-	cache := &Cache{db, redisPool}
-	mtn.Map(cache)
-	//	load rbac node
-	if nMap, err := cache.RbacNodeToMap(); err != nil {
-		logger.Printf("rbac node to map fails %s", err)
-	} else {
-		mtn.Map(nMap)
-	}
-	//load rbac menu
-	if ms, err := cache.RbacMenuToSlice(); err != nil {
-		logger.Printf("rbac menu to slice fails %s", err)
-	} else {
-		mtn.Map(ms)
-	}
-	//session
-	store := sessions.NewCookieStore([]byte("secret123"))
-	mtn.Use(sessions.Sessions("Qsession", store))
-	//render
-	rOptions := render.Options{}
-	rOptions.Extensions = []string{".tmpl", ".html"}
-	rOptions.Funcs = []template.FuncMap{funcMaps}
-	mtn.Use(render.Renderer(rOptions))
-
-	mtn.Map(&cfg)
 
 	if *webPtr {
 		//rbac filter
@@ -184,8 +197,10 @@ func main() {
 	}
 	if *apiPtr {
 		mtn.Get("/api/task/one", taskOneApi)
+		mtn.Get("/api/task/onex", taskOnexApi)
 		mtn.Post("/api/task/result", taskResultApi)
 		mtn.Get("/api/task/number", taskNumberApi)
+		mtn.Get("/api/proxy/ua", proxyUaApi)
 	}
 	if *webPtr || *apiPtr {
 		go http.ListenAndServe(*portPtr, mtn)
@@ -195,22 +210,22 @@ func main() {
 		rc, err := redisPool.Get()
 		defer redisPool.Close(rc)
 		if err != nil {
-			log.Printf("get redis connection fails %s", err)
+			logger.Printf("get redis connection fails %s", err)
 			return
 		}
 		queue := sexredis.New()
 		queue.SetRClient(RANKING_KEYWORD_QUEUE, rc)
-		log.Printf("key handler start.....")
+		logger.Printf("key handler start.....")
 		queue.Worker(2, true, &Order{&cfg, logger, redisPool}, &Index{&cfg, logger, redisPool},
 			&Payment{&cfg, logger, db}, &NormCreate{&cfg, logger, db},
-			&PutIn{&cfg, logger, redisPool}, &Recoder{&cfg, logger, db}, &OrderLog{&cfg, logger, db})
+			&PutInTask{&cfg, logger, redisPool}, &Recoder{&cfg, logger, db}, &OrderLog{&cfg, logger, db})
 	}
 
 	if *normHandlerPtr {
 		normRc, err := redisPool.Get()
 		defer redisPool.Close(normRc)
 		if err != nil {
-			log.Printf("get redis connection fails %s", err)
+			logger.Printf("get redis connection fails %s", err)
 			return
 		}
 
@@ -220,7 +235,7 @@ func main() {
 		proxyRc, err := redisPool.Get()
 		defer redisPool.Close(proxyRc)
 		if err != nil {
-			log.Printf("get redis connection fails %s", err)
+			logger.Printf("get redis connection fails %s", err)
 			return
 		}
 		proxyQueue := sexredis.New()
@@ -235,7 +250,7 @@ func main() {
 		taskRc, err := redisPool.Get()
 		defer redisPool.Close(taskRc)
 		if err != nil {
-			log.Printf("get redis connection fails %s", err)
+			logger.Printf("get redis connection fails %s", err)
 			return
 		}
 
@@ -245,7 +260,7 @@ func main() {
 		areaRc, err := redisPool.Get()
 		defer redisPool.Close(areaRc)
 		if err != nil {
-			log.Printf("get redis connection fails %s", err)
+			logger.Printf("get redis connection fails %s", err)
 			return
 		}
 		areaQueue := sexredis.New()
@@ -262,7 +277,7 @@ func main() {
 		taskRc, err := redisPool.Get()
 		defer redisPool.Close(taskRc)
 		if err != nil {
-			log.Printf("get redis connection fails %s", err)
+			logger.Printf("get redis connection fails %s", err)
 			return
 		}
 		taskQueue := task.New()
@@ -272,16 +287,34 @@ func main() {
 			&ProxyCheckSogou{&cfg, logger, redisPool},
 			&ProxyQueuePutIn{&cfg, logger, redisPool})
 	}
+	if *adslPtr {
+		for {
+			time.Sleep(5e9)
+			logger.Printf("%s %s %s", cfg.AdslCName, cfg.AdslUser, cfg.AdslPasswd)
+			if rs, err := ExeCmd("rasdial", cfg.AdslCName, cfg.AdslUser, cfg.AdslPasswd); err == nil && strings.Contains(rs, "已连接") {
+				logger.Printf("%s %s", cfg.AdslCName, rs)
+				break
+			} else {
+				logger.Printf("%s %s %s", cfg.AdslCName, rs, err)
+				continue
+			}
+		}
+	}
 	if *threadHandlerPtr {
 		rc, err := redisPool.Get()
 		defer redisPool.Close(rc)
 		if err != nil {
-			log.Printf("get redis connection fails %s", err)
+			logger.Printf("get redis connection fails %s", err)
 			return
 		}
 		queue := thread.New()
 		queue.SetRequestUri(cfg.TaskNUri)
 		queue.Worker(2, true, &Control{&cfg, logger, redisPool}, &Submit{&cfg, logger, redisPool})
+	}
+
+	if *regularPtr {
+		rt := &RegularTasks{&cfg, logger, redisPool, db}
+		rt.Handler(rebuild())
 	}
 	done := make(chan bool)
 	<-done

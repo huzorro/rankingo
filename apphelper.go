@@ -5,8 +5,10 @@ import (
 	"fmt"
 	"github.com/PuerkitoBio/goquery"
 	"html/template"
+	"io/ioutil"
 	"math"
 	"math/rand"
+	"os/exec"
 	"sort"
 	"strings"
 	"time"
@@ -85,90 +87,33 @@ func ProxyCheck(vurl, ip, port, vflag, vattr string) (bool, error) {
 	return true, nil
 }
 
-//func (self *ProxyCheckOschina) SProcess(msg *sexredis.Msg) {
-//	self.log.Printf("check proxy and put on queue")
-//	if msg.Err != nil {
-//		return
-//	}
+func ExeCmd(name string, arg ...string) (string, error) {
+	cmd := exec.Command(name, arg...)
+	outPipe, err := cmd.StdoutPipe()
+	if err != nil {
+		return "", err
+	}
 
-//	//msg type ok?
-//	m := msg.Content.(ProxyMsg)
-//	resp, err := HttpGetFromProxy(self.c.CheckApiOschina, "https://"+m.Ip+":"+m.Port)
-//	if err != nil {
-//		self.log.Println("proxy check fails %s", err)
-//		msg.Err = errors.New("proxy check fails")
-//		return
-//	}
-//	doc, err := goquery.NewDocumentFromResponse(resp)
-//	if err != nil {
-//		self.log.Println("go query create document fails %s", err)
-//		msg.Err = errors.New("go query create document fails")
-//		return
-//	}
-//	defer resp.Body.Close()
-//	if _, exists := doc.Find("#f_email").Attr("name"); !exists {
-//		self.log.Println("can not get the specified element validation fails")
-//		msg.Err = errors.New("can not get the specified element validation fails")
-//		return
-//	}
+	errPipe, err := cmd.StderrPipe()
+	if err != nil {
+		return "", err
+	}
 
-//	msg.Content = m
-//}
+	if err := cmd.Start(); err != nil {
+		return "", err
+	}
+	bytesErr, err := ioutil.ReadAll(errPipe)
+	if err != nil {
+		return "", err
+	}
 
-//func (self *ProxyCheckSogou) SProcess(msg *sexredis.Msg) {
-//	self.log.Printf("check proxy and put on queue")
-//	if msg.Err != nil {
-//		return
-//	}
-//	//msg type ok?
-//	m := msg.Content.(ProxyMsg)
-//	resp, err := HttpGetFromProxy(self.c.CheckApiSogou, "https://"+m.Ip+":"+m.Port)
-//	if err != nil {
-//		self.log.Println("proxy check fails %s", err)
-//		msg.Err = errors.New("proxy check fails")
-//		return
-//	}
-//	doc, err := goquery.NewDocumentFromResponse(resp)
-//	if err != nil {
-//		self.log.Println("go query create document fails %s", err)
-//		msg.Err = errors.New("go query create document fails")
-//		return
-//	}
-//	defer resp.Body.Close()
-//	if _, exists := doc.Find("input[name=_asf]").Attr("value"); !exists {
-//		self.log.Println("can not get the specified element validation fails")
-//		msg.Err = errors.New("can not get the specified element validation fails")
-//		return
-//	}
+	if len(bytesErr) != 0 {
+		return "", errors.New(string(bytesErr))
+	}
+	bytesResult, err := ioutil.ReadAll(outPipe)
 
-//	msg.Content = m
-//}
-
-//func (self *ProxyCheck360) SProcess(msg *sexredis.Msg) {
-//	self.log.Printf("check proxy and put on queue")
-//	if msg.Err != nil {
-//		return
-//	}
-//	//msg type ok?
-//	m := msg.Content.(ProxyMsg)
-//	resp, err := HttpGetFromProxy(self.c.CheckApi360, "https://"+m.Ip+":"+m.Port)
-//	if err != nil {
-//		self.log.Println("proxy check fails %s", err)
-//		msg.Err = errors.New("proxy check fails")
-//		return
-//	}
-//	doc, err := goquery.NewDocumentFromResponse(resp)
-//	if err != nil {
-//		self.log.Println("go query create document fails %s", err)
-//		msg.Err = errors.New("go query create document fails")
-//		return
-//	}
-//	defer resp.Body.Close()
-//	if _, exists := doc.Find("#search-button").Attr("value"); !exists {
-//		self.log.Println("can not get the specified element validation fails")
-//		msg.Err = errors.New("can not get the specified element validation fails")
-//		return
-//	}
-
-//	msg.Content = m
-//}
+	if err != nil {
+		return "", err
+	}
+	return string(bytesResult), nil
+}

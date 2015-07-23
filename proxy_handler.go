@@ -57,7 +57,7 @@ type ProxyKuaidaili struct {
 	Code int64  `json:"code"`
 	Data struct {
 		Count     int64    `json:"count"`
-		ProxyList []string `json:"proxy_list"		`
+		ProxyList []string `json:"proxy_list"`
 	} `json:"data"`
 }
 
@@ -76,7 +76,7 @@ func (self *ProxyGetKuaidaili) SProcess(msg *sexredis.Msg) {
 	}
 	q := api.Query()
 	//订单号
-	q.Add("orderid", "")
+	q.Add("orderid", "953736356849843")
 	//数量
 	q.Add("num", "1")
 	//稳定性
@@ -131,19 +131,19 @@ func (self *ProxyCheckOschina) SProcess(msg *sexredis.Msg) {
 	m := msg.Content.(ProxyMsg)
 	resp, err := HttpGetFromProxy(self.c.CheckApiOschina, "https://"+m.Ip+":"+m.Port)
 	if err != nil {
-		self.log.Println("proxy check fails %s", err)
+		self.log.Printf("proxy check fails %s", err)
 		msg.Err = errors.New("proxy check fails")
 		return
 	}
 	doc, err := goquery.NewDocumentFromResponse(resp)
 	if err != nil {
-		self.log.Println("go query create document fails %s", err)
+		self.log.Printf("go query create document fails %s", err)
 		msg.Err = errors.New("go query create document fails")
 		return
 	}
 	defer resp.Body.Close()
 	if _, exists := doc.Find("#f_email").Attr("name"); !exists {
-		self.log.Println("can not get the specified element validation fails")
+		self.log.Printf("can not get the specified element validation fails")
 		msg.Err = errors.New("can not get the specified element validation fails")
 		return
 	}
@@ -160,19 +160,19 @@ func (self *ProxyCheckSogou) SProcess(msg *sexredis.Msg) {
 	m := msg.Content.(ProxyMsg)
 	resp, err := HttpGetFromProxy(self.c.CheckApiSogou, "https://"+m.Ip+":"+m.Port)
 	if err != nil {
-		self.log.Println("proxy check fails %s", err)
+		self.log.Printf("proxy check fails %s", err)
 		msg.Err = errors.New("proxy check fails")
 		return
 	}
 	doc, err := goquery.NewDocumentFromResponse(resp)
 	if err != nil {
-		self.log.Println("go query create document fails %s", err)
+		self.log.Printf("go query create document fails %s", err)
 		msg.Err = errors.New("go query create document fails")
 		return
 	}
 	defer resp.Body.Close()
 	if _, exists := doc.Find("input[name=_asf]").Attr("value"); !exists {
-		self.log.Println("can not get the specified element validation fails")
+		self.log.Printf("can not get the specified element validation fails")
 		msg.Err = errors.New("can not get the specified element validation fails")
 		return
 	}
@@ -189,19 +189,19 @@ func (self *ProxyCheck360) SProcess(msg *sexredis.Msg) {
 	m := msg.Content.(ProxyMsg)
 	resp, err := HttpGetFromProxy(self.c.CheckApi360, "https://"+m.Ip+":"+m.Port)
 	if err != nil {
-		self.log.Println("proxy check fails %s", err)
+		self.log.Printf("proxy check fails %s", err)
 		msg.Err = errors.New("proxy check fails")
 		return
 	}
 	doc, err := goquery.NewDocumentFromResponse(resp)
 	if err != nil {
-		self.log.Println("go query create document fails %s", err)
+		self.log.Printf("go query create document fails %s", err)
 		msg.Err = errors.New("go query create document fails")
 		return
 	}
 	defer resp.Body.Close()
 	if _, exists := doc.Find("#search-button").Attr("value"); !exists {
-		self.log.Println("can not get the specified element validation fails")
+		self.log.Printf("can not get the specified element validation fails")
 		msg.Err = errors.New("can not get the specified element validation fails")
 		return
 	}

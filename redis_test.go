@@ -39,6 +39,7 @@ func TestHScan(t *testing.T) {
 				log.Printf("Got value of kind %s (%v), we use the integer part: %d   []bytes : %s\n", reflect.TypeOf(m).Kind(), m, m.Integer, string(m.Bytes))
 				cur, _ = strconv.ParseInt(string(m.Bytes), 10, 64)
 			}
+
 		}
 		if cur == 0 {
 			break

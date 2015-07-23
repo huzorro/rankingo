@@ -22,7 +22,11 @@
 	"indexApi":"http://api.91cha.com/index",
 	"indexApiKey":"75163967617a49899412a1e5e0ae7858",
 	"proxyApi":"",
-	"CheckApiOschina":"",
-	"CheckApiSogo":"",
-	"CheckApi360":""
+	"checkApiOschina":"https://www.oschina.net/home/login",
+	"checkApiSogou":"https://www.sogou.com",
+	"checkApi360":"https://www.haosou.com",
+	"adslCName":"-a",
+	"adslUser":"-g",
+	"adslPasswd":"-h"
+	
 }

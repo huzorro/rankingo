@@ -19,17 +19,20 @@ type RegularTasks struct {
 
 func (self *RegularTasks) Handler(f func(r *RegularTasks)) {
 	timer := time.NewTicker(10 * time.Minute)
-	for {
-		select {
-		case <-timer.C:
-			go func() {
-				f(self)
-				if int64(time.Now().Hour()) == self.c.Timing {
+	go func() {
+		for {
+			select {
+			case <-timer.C:
+				go func() {
 					f(self)
-				}
-			}()
+					if int64(time.Now().Hour()) == self.c.Timing {
+						f(self)
+
+					}
+				}()
+			}
 		}
-	}
+	}()
 }
 
 func rebuild() func(r *RegularTasks) {

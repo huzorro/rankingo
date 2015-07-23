@@ -78,7 +78,7 @@ func (self *Control) SProcess(msg *sexredis.Msg) {
 		msg.Err = errors.New("get cmd exec result fails")
 		return
 	}
-	log.Printf(string(bytesResult))
+	self.log.Printf(string(bytesResult))
 	msg.Content = string(bytesResult)
 }
 

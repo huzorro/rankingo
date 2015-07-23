@@ -502,6 +502,29 @@ func keyAddAction(r *http.Request, w http.ResponseWriter, db *sql.DB, log *log.L
 		return http.StatusOK, string(js)
 	}
 
+	stmtOutSec, err := db.Prepare("SELECT COUNT(*) FROM ranking_keyword WHERE msg = ?")
+	defer stmtOutSec.Close()
+	if err != nil {
+		log.Printf("%s", err)
+		js, _ = json.Marshal(Status{"201", "操作失败"})
+		return http.StatusOK, string(js)
+	}
+	if js, err = json.Marshal(key); err != nil {
+		log.Printf("json Marshal fails %s", err)
+		js, _ = json.Marshal(Status{"201", "操作失败"})
+		return http.StatusOK, string(js)
+	}
+	row = stmtOutSec.QueryRow(js)
+	if err := row.Scan(&n); err != nil {
+		log.Printf("%s", err)
+		js, _ = json.Marshal(Status{"201", "操作失败"})
+		return http.StatusOK, string(js)
+	}
+	if n > 0 {
+		js, _ = json.Marshal(Status{"201", "操作失败, 添加了重复数据"})
+		return http.StatusOK, string(js)
+	}
+
 	stmtIn, err := db.Prepare("INSERT INTO ranking_keyword (msg) VALUES(?)")
 	defer stmtIn.Close()
 	if err != nil {
@@ -509,13 +532,13 @@ func keyAddAction(r *http.Request, w http.ResponseWriter, db *sql.DB, log *log.L
 		js, _ = json.Marshal(Status{"201", "操作失败"})
 		return http.StatusOK, string(js)
 	}
-	key.Logtime = time.Now().Format("2006-01-02 15:04:05")
+	//	key.Logtime = time.Now().Format("2006-01-02 15:04:05")
 
-	if js, err = json.Marshal(key); err != nil {
-		log.Printf("json Marshal fails %s", err)
-		js, _ = json.Marshal(Status{"201", "操作失败"})
-		return http.StatusOK, string(js)
-	}
+	//	if js, err = json.Marshal(key); err != nil {
+	//		log.Printf("json Marshal fails %s", err)
+	//		js, _ = json.Marshal(Status{"201", "操作失败"})
+	//		return http.StatusOK, string(js)
+	//	}
 
 	result, err := stmtIn.Exec(js)
 	if err != nil {
@@ -570,7 +593,48 @@ func taskNumberApi(r *http.Request, w http.ResponseWriter, log *log.Logger,
 	}
 
 }
+func taskOnexApi(r *http.Request, w http.ResponseWriter, log *log.Logger,
+	redisPool *sexredis.RedisPool, cfg *Cfg) (int, string) {
+	redisClient, err := redisPool.Get()
+	defer redisPool.Close(redisClient)
+	if err != nil {
+		log.Printf("get connection of redis pool %s", err)
+		js, _ := json.Marshal(Status{"201", "操作失败"})
+		return http.StatusOK, string(js)
+	}
+	m, err := redisClient.LPop(RANKING_TASK_QUEUE)
+	if err != nil {
+		log.Printf("get out of queue elem fails %s", err)
+		js, _ := json.Marshal(Status{"201", "操作失败"})
+		return http.StatusOK, string(js)
+	}
+	if m != "" {
+		//出队后, 分时数据递减, 重新放入task队列
+		var msg TaskMsg
+		if err := json.Unmarshal([]byte(m), &msg); err != nil {
+			log.Printf("json Unmarshal fails %s", err)
+			js, _ := json.Marshal(Status{"201", "操作失败"})
+			return http.StatusOK, string(js)
+		}
+		h := fmt.Sprint(time.Now().Hour())
 
+		msg.NormMsg.Hour[h] = msg.NormMsg.Hour[h] - 1
+		if msg.NormMsg.Hour[h] < 0 {
+			js, _ := json.Marshal(Status{"202", "该时段任务达标"})
+			return http.StatusOK, string(js)
+		}
+		js, _ := json.Marshal(msg)
+		if _, err := redisClient.RPush(RANKING_TASK_QUEUE, js); err != nil {
+			log.Printf("put end of the queue fails %s", err)
+		}
+		return http.StatusOK, string(m)
+	} else {
+		log.Printf("not found elem in queue %s", err)
+		js, _ := json.Marshal(Status{"404", "没有发现任务"})
+		return http.StatusOK, string(js)
+	}
+
+}
 func taskOneApi(r *http.Request, w http.ResponseWriter, log *log.Logger,
 	redisPool *sexredis.RedisPool, cfg *Cfg) (int, string) {
 	redisClient, err := redisPool.Get()
@@ -587,7 +651,7 @@ func taskOneApi(r *http.Request, w http.ResponseWriter, log *log.Logger,
 		return http.StatusOK, string(js)
 	}
 	if m != "" {
-		//出队后, 分时数据递减, 放入队尾
+		//出队后, 分时数据递减, 取出NormMsg放入norm队列, 等待新的代理数据, 重新生成task任务
 		var msg TaskMsg
 		if err := json.Unmarshal([]byte(m), &msg); err != nil {
 			log.Printf("json Unmarshal fails %s", err)
@@ -597,15 +661,24 @@ func taskOneApi(r *http.Request, w http.ResponseWriter, log *log.Logger,
 		h := fmt.Sprint(time.Now().Hour())
 
 		msg.NormMsg.Hour[h] = msg.NormMsg.Hour[h] - 1
-		js, _ := json.Marshal(msg)
-		if _, err := redisClient.RPush(RANKING_TASK_QUEUE, js); err != nil {
-			log.Printf("put end of the queue fails %s", err)
-		}
+
 		if msg.NormMsg.Hour[h] < 0 {
 			js, _ := json.Marshal(Status{"202", "该时段任务达标"})
 			return http.StatusOK, string(js)
 		}
-		return http.StatusOK, string(js)
+
+		js, _ := json.Marshal(msg.NormMsg)
+		if msg.NormMsg.KeyMsg.KeyCity != "" || msg.NormMsg.KeyMsg.KeyProvince != "" {
+			if _, err := redisClient.RPush(RANKING_AREA_NORM_QUEUE, js); err != nil {
+				log.Printf("put end of the queue fails %s", err)
+			}
+		} else {
+			if _, err := redisClient.RPush(RANKING_COMMON_NORM_QUEUE, js); err != nil {
+				log.Printf("put end of the queue fails %s", err)
+			}
+		}
+
+		return http.StatusOK, string(m)
 	} else {
 		log.Printf("not found elem in queue %s", err)
 		js, _ := json.Marshal(Status{"404", "没有发现任务"})
@@ -640,6 +713,10 @@ func taskResultApi(r *http.Request, w http.ResponseWriter, db *sql.DB, log *log.
 	}
 }
 
+func proxyUaApi(r *http.Request, w http.ResponseWriter, db *sql.DB, log *log.Logger) (int, string) {
+	log.Printf("%s | %s", r.RemoteAddr, r.UserAgent())
+	return http.StatusOK, r.RemoteAddr + ";" + r.UserAgent()
+}
 func payAdminAction(r *http.Request, w http.ResponseWriter, db *sql.DB,
 	log *log.Logger, cfg *Cfg, session sessions.Session) (int, string) {
 	r.ParseForm()

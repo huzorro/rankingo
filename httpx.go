@@ -30,7 +30,7 @@ func NewHttpx(reqUrl string) (h *Httpx) {
 		Url:     reqUrl,
 		Headers: headers,
 		Method:  "GET",
-		Timeout: 30,
+		Timeout: 10,
 	}
 }
 
