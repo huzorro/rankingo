@@ -392,7 +392,7 @@ func (self *Recoder) SProcess(msg *sexredis.Msg) {
 		return
 	}
 	if _, err := stmtIn.Exec(m.KeyMsg.Id, m.KeyMsg.Uid, m.KeyMsg.Owner, m.KeyMsg.Keyword, m.KeyMsg.Destlink, m.HOrder, m.COrder,
-		m.HIndex, m.CIndex, m.KeyMsg.KeyCity, m.KeyMsg.KeyProvince, m.Cost, m.KeyMsg.Status, m.KeyMsg.Logtime); err != nil {
+		m.HIndex, m.CIndex, m.KeyMsg.KeyCity, m.KeyMsg.KeyProvince, m.Cost, m.KeyMsg.Status, time.Now().Format("2006-01-02 15:04:05")); err != nil {
 		self.log.Printf("stmtIn.Exec fails %s", err)
 		msg.Err = errors.New("stmtIn.Exec fails")
 		return

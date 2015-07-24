@@ -19,13 +19,11 @@ const (
 type Control struct {
 	c   *Cfg
 	log *log.Logger
-	p   *sexredis.RedisPool
 }
 
 type Submit struct {
 	c   *Cfg
 	log *log.Logger
-	p   *sexredis.RedisPool
 }
 
 //berserkJS --command --script=/home/huzorro/vagrant/jsprojects/ranking/baidu.js

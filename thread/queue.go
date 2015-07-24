@@ -2,6 +2,7 @@ package thread
 
 import (
 	"errors"
+	"fmt"
 	"github.com/huzorro/spfactor/sexredis"
 	"io/ioutil"
 	"log"
@@ -21,7 +22,6 @@ type Queue struct {
 	adslUser   string
 	adslPasswd string
 	sexredis.Queue
-	Msgchan chan sexredis.Msg
 }
 
 func New() *Queue {
@@ -64,15 +64,20 @@ use channel implement like python yield
 func (self *Queue) Consume() {
 	//	self.Msgchan = make(chan sexredis.Msg)
 	for {
+		fmt.Println("go consume...")
 		msg := self.Get()
+		fmt.Printf("1%+v", msg)
 		if n, ok := msg.Content.(int64); ok && n > 0 {
+			fmt.Println(n, ok)
 			self.Msgchan <- msg
 		}
+		fmt.Printf("2%+v", msg)
 		time.Sleep(3000 * time.Millisecond)
 	}
 }
 
 func (self *Queue) Worker(pnum uint, serial bool, ps ...sexredis.Processor) {
+	fmt.Printf("%d %s", pnum, self.uri)
 	control := make(chan sexredis.Msg, pnum)
 	adsl := make(chan sexredis.Msg, pnum)
 	go func() {
@@ -110,22 +115,26 @@ func (self *Queue) Worker(pnum uint, serial bool, ps ...sexredis.Processor) {
 			}
 			//挂断adsl
 			for {
+				log.Printf("adsl disconnecting cname:%s", self.adslCName)
+
 				if rs, err := self.AdslDisconnect(); err == nil {
-					log.Printf("%s %s", self.adslCName, rs)
+					log.Printf("adsl disconnected cname:%s, result:%s", self.adslCName, rs)
 					break
 
 				} else {
-					log.Printf("%s %s %s", self.adslCName, rs, err)
+					log.Printf("adsl disconnected fails cname:%s, result:%s, err:%s", self.adslCName, rs, err)
 					continue
 				}
 			}
 			time.Sleep(5000 * time.Millisecond)
 			//adsl拨号
 			for {
+				log.Printf("adsl connecting cname:%s, user:%s, passwd:%s", self.adslCName, self.adslUser, self.adslPasswd)
+
 				if rs, err := self.AdslConnect(); err == nil && strings.Contains(rs, "已连接") {
-					log.Printf("%s %s", self.adslCName, rs)
+					log.Printf("adsl connected  cname:%s, result:%s", self.adslCName, rs)
 				} else {
-					log.Printf("%s %s %s", self.adslCName, rs, err)
+					log.Printf("adsl connect fails cname:%s, result:%s, err:%s", self.adslCName, rs, err)
 					continue
 				}
 			}

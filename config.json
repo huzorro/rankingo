@@ -1,8 +1,9 @@
 {
-	"taskUri":"",
-	"submitUri":"",
-	"rankPath":"",
-	"rankParam":"",
+	"taskUri":"http://localhost:10086/api/task/onex",
+	"taskNUri":"http://localhost:10086/api/task/number",
+	"submitUri":"http://localhost:10086/api/task/result",
+	"rankPath":"ls",
+	"rankParam":"-ah",
 	"threadN":5,
 	"timeout":300000,
 	"Authorization":"",

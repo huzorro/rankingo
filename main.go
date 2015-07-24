@@ -107,6 +107,7 @@ func main() {
 	proxyHandlerPtr := flag.Bool("proxy", false, "common proxy handler start")
 	threadHandlerPtr := flag.Bool("thread", false, "thread control handler start")
 	adslPtr := flag.Bool("adsl", false, "adsl connect")
+	disAdslPtr := flag.Bool("disAdsl", false, "adsl disconnect")
 	regularPtr := flag.Bool("regular", false, "regular task start")
 	flag.Parse()
 
@@ -125,7 +126,7 @@ func main() {
 
 	logger := log.New(os.Stdout, "\r\n", log.Ldate|log.Ltime|log.Lshortfile)
 
-	if !*adslPtr && !*threadHandlerPtr {
+	if !*adslPtr && !*threadHandlerPtr && !*disAdslPtr {
 		redisPool = &sexredis.RedisPool{make(chan *redis.Client, *redisIdlePtr), func() (*redis.Client, error) {
 			client := redis.New()
 			err := client.Connect("localhost", uint(6379))
@@ -291,9 +292,9 @@ func main() {
 	if *adslPtr {
 		for {
 			time.Sleep(5e9)
-			logger.Printf("%s %s %s", cfg.AdslCName, cfg.AdslUser, cfg.AdslPasswd)
+			logger.Printf("adsl connecting cname:%s user:%s passwd:%s", cfg.AdslCName, cfg.AdslUser, cfg.AdslPasswd)
 			if rs, err := ExeCmd("rasdial", cfg.AdslCName, cfg.AdslUser, cfg.AdslPasswd); err == nil && strings.Contains(rs, "已连接") {
-				logger.Printf("%s %s", cfg.AdslCName, rs)
+				logger.Printf("adsl connecting %s %s", cfg.AdslCName, rs)
 				break
 			} else {
 				logger.Printf("%s %s %s", cfg.AdslCName, rs, err)
@@ -301,16 +302,20 @@ func main() {
 			}
 		}
 	}
-	if *threadHandlerPtr {
-		rc, err := redisPool.Get()
-		defer redisPool.Close(rc)
-		if err != nil {
-			logger.Printf("get redis connection fails %s", err)
-			return
+
+	if *disAdslPtr {
+		logger.Printf("adsl disconnecting cname:%s user:%s passwd:%s", cfg.AdslCName, cfg.AdslUser, cfg.AdslPasswd)
+		if rs, err := ExeCmd("rasdial", cfg.AdslCName, "/disconnect"); err != nil {
+			logger.Printf("adsl disconnect fails cname:%s, rs:%s, err:%s", cfg.AdslCName, rs, err)
+		} else {
+			logger.Printf("adsl disconnected cname:%s, rs:%s", cfg.AdslCName, rs)
 		}
+	}
+
+	if *threadHandlerPtr {
 		queue := thread.New()
 		queue.SetRequestUri(cfg.TaskNUri)
-		queue.Worker(2, true, &Control{&cfg, logger, redisPool}, &Submit{&cfg, logger, redisPool})
+		queue.Worker(uint(cfg.ThreadN), true, &Control{&cfg, logger}, &Submit{&cfg, logger})
 	}
 
 	if *regularPtr {

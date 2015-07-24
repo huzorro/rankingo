@@ -623,6 +623,7 @@ func taskOnexApi(r *http.Request, w http.ResponseWriter, log *log.Logger,
 			js, _ := json.Marshal(Status{"202", "该时段任务达标"})
 			return http.StatusOK, string(js)
 		}
+		msg.InitTime = time.Now().UnixNano() / (1000 * 1000)
 		js, _ := json.Marshal(msg)
 		if _, err := redisClient.RPush(RANKING_TASK_QUEUE, js); err != nil {
 			log.Printf("put end of the queue fails %s", err)
