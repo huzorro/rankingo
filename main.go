@@ -19,7 +19,6 @@ import (
 	"net/http"
 	"os"
 	"runtime"
-	"strings"
 	"time"
 )
 
@@ -293,7 +292,7 @@ func main() {
 		for {
 			time.Sleep(5e9)
 			logger.Printf("adsl connecting cname:%s user:%s passwd:%s", cfg.AdslCName, cfg.AdslUser, cfg.AdslPasswd)
-			if rs, err := ExeCmd("rasdial", cfg.AdslCName, cfg.AdslUser, cfg.AdslPasswd); err == nil && strings.Contains(rs, "已连接") {
+			if rs, err := ExeCmd("rasdial", cfg.AdslCName, cfg.AdslUser, cfg.AdslPasswd); err == nil {
 				logger.Printf("adsl connecting %s %s", cfg.AdslCName, rs)
 				break
 			} else {

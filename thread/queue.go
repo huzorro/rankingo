@@ -9,7 +9,6 @@ import (
 	"net/http"
 	"os/exec"
 	"strconv"
-	"strings"
 	"time"
 )
 
@@ -131,7 +130,7 @@ func (self *Queue) Worker(pnum uint, serial bool, ps ...sexredis.Processor) {
 			for {
 				log.Printf("adsl connecting cname:%s, user:%s, passwd:%s", self.adslCName, self.adslUser, self.adslPasswd)
 
-				if rs, err := self.AdslConnect(); err == nil && strings.Contains(rs, "已连接") {
+				if rs, err := self.AdslConnect(); err == nil {
 					log.Printf("adsl connected  cname:%s, result:%s", self.adslCName, rs)
 				} else {
 					log.Printf("adsl connect fails cname:%s, result:%s, err:%s", self.adslCName, rs, err)

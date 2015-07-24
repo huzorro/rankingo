@@ -110,8 +110,8 @@ func ExeCmd(name string, arg ...string) (string, error) {
 	if len(bytesErr) != 0 {
 		return "", errors.New(string(bytesErr))
 	}
-	bytesResult, err := ioutil.ReadAll(outPipe)
 
+	bytesResult, err := ioutil.ReadAll(outPipe)
 	if err != nil {
 		return "", err
 	}

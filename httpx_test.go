@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"github.com/PuerkitoBio/goquery"
 	//	"io/ioutil"
-	_ "github.com/djimenez/iconv-go"
+	"github.com/djimenez/iconv-go"
 	"testing"
 )
 
@@ -16,7 +16,8 @@ func TestHttpGet(t *testing.T) {
 		fmt.Println(err)
 	}
 	//	body, _ := ioutil.ReadAll(resp.Body)
-	//	utfBody, err := iconv.NewReader(resp.Body, "gbk", "utf-8")
+	//		utfBody, err := iconv.NewReader(resp.Body, "gbk", "utf-8")
+	//		iconv.ConvertString()
 
 	//	if err != nil {
 	//		fmt.Println(err)

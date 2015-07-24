@@ -26,8 +26,8 @@
 	"checkApiOschina":"https://www.oschina.net/home/login",
 	"checkApiSogou":"https://www.sogou.com",
 	"checkApi360":"https://www.haosou.com",
-	"adslCName":"-a",
-	"adslUser":"-g",
-	"adslPasswd":"-h"
+	"adslCName":"宽带连接",
+	"adslUser":"070101066693",
+	"adslPasswd":"66668888"
 	
 }
