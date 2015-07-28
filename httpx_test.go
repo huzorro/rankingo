@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"github.com/PuerkitoBio/goquery"
 	//	"io/ioutil"
-	"github.com/djimenez/iconv-go"
+	//"github.com/djimenez/iconv-go"
 	"testing"
 )
 
@@ -91,4 +91,21 @@ func TestHttpGet360(t *testing.T) {
 	//	html := doc.Text()
 	//	fmt.Println(html)
 	fmt.Println("编码测试")
+}
+
+func TestGetIp(t *testing.T) {
+	resp, err := HttpGet("http://ip.cn")
+
+	if err != nil {
+		fmt.Printf("get ip fails %s", err)
+	}
+	doc, err := goquery.NewDocumentFromResponse(resp)
+	if err != nil {
+		fmt.Printf("go query create document fails %s", err)
+	}
+	defer resp.Body.Close()
+
+	ip := doc.Find("code").Text()
+	elem := doc.Find("#result").Text()
+	fmt.Printf("ip:%s, elem:%s", ip, elem)
 }

@@ -92,7 +92,7 @@ func (self *Submit) SProcess(msg *sexredis.Msg) {
 		return
 	}
 	client := &http.Client{}
-	req, err := http.NewRequest("POST", self.c.SubmitUri, strings.NewReader(m))
+	req, err := http.NewRequest("POST", self.c.LogUri, strings.NewReader(m))
 	if err != nil {
 		self.log.Printf("submit request fails %s", err)
 		msg.Err = errors.New("submit request fails")

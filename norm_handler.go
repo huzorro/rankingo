@@ -21,7 +21,9 @@ type NormMsg struct {
 }
 
 type ProxyMsg struct {
-	Ip   string `json:"ip"`
+	//对于使用adsl的服务器, ip设置为服务器ip
+	Ip string `json:"ip"`
+	//对于使用adsl的服务器, port设置为adsl拨号成功后的出口ip的详细信息
 	Port string `json:"port"`
 }
 

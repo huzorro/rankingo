@@ -4,6 +4,7 @@ import (
 	"database/sql"
 	"encoding/json"
 	"fmt"
+	"github.com/PuerkitoBio/goquery"
 	"github.com/huzorro/spfactor/sexredis"
 	"github.com/martini-contrib/render"
 	"github.com/martini-contrib/sessions"
@@ -21,6 +22,8 @@ const (
 	RANKING_KEYWORD_QUEUE     = "ranking:keyword:queue"
 	RANKING_KEYWORD_HASH      = "ranking:keyword:hash"
 	RANKING_TASK_RESULT_QUEUE = "ranking:task:result"
+	RANKING_TASK_LOG_QUEUE    = "ranking:task:log"
+	RANKING_TASK_MONI_QUEUE   = "ranking:task:moni"
 )
 const (
 	RANKING_STATUS_START = iota
@@ -66,7 +69,10 @@ type Status struct {
 	Status string `json:"status"`
 	Text   string `json:"text"`
 }
-
+type IpDesc struct {
+	Ip   string `json:"ip"`
+	Desc string `json:"desc"`
+}
 type PageResult struct {
 	Result
 	Norms []*NormMsg
@@ -688,6 +694,57 @@ func taskOneApi(r *http.Request, w http.ResponseWriter, log *log.Logger,
 
 }
 
+func taskLogApi(r *http.Request, w http.ResponseWriter, db *sql.DB, log *log.Logger,
+	redisPool *sexredis.RedisPool, cfg *Cfg, session sessions.Session) (int, string) {
+	data, err := ioutil.ReadAll(r.Body)
+	defer r.Body.Close()
+	if err != nil {
+		log.Printf("json read fails %s", err)
+		js, _ := json.Marshal(Status{"201", "操作失败"})
+		return http.StatusOK, string(js)
+	}
+	redisClient, err := redisPool.Get()
+	defer redisPool.Close(redisClient)
+	if err != nil {
+		log.Printf("get connection of redis pool %s", err)
+		js, _ := json.Marshal(Status{"201", "操作失败"})
+		return http.StatusOK, string(js)
+	}
+	if _, err := redisClient.RPush(RANKING_TASK_LOG_QUEUE, data); err != nil {
+		log.Printf("put in %s fails %s", RANKING_TASK_LOG_QUEUE, err)
+		js, _ := json.Marshal(Status{"201", "操作失败"})
+		return http.StatusOK, string(js)
+	} else {
+		js, _ := json.Marshal(Status{"200", "操作成功"})
+		return http.StatusOK, string(js)
+	}
+}
+
+func taskMoniApi(r *http.Request, w http.ResponseWriter, db *sql.DB, log *log.Logger,
+	redisPool *sexredis.RedisPool, cfg *Cfg, session sessions.Session) (int, string) {
+	data, err := ioutil.ReadAll(r.Body)
+	defer r.Body.Close()
+	if err != nil {
+		log.Printf("json read fails %s", err)
+		js, _ := json.Marshal(Status{"201", "操作失败"})
+		return http.StatusOK, string(js)
+	}
+	redisClient, err := redisPool.Get()
+	defer redisPool.Close(redisClient)
+	if err != nil {
+		log.Printf("get connection of redis pool %s", err)
+		js, _ := json.Marshal(Status{"201", "操作失败"})
+		return http.StatusOK, string(js)
+	}
+	if _, err := redisClient.RPush(RANKING_TASK_MONI_QUEUE, data); err != nil {
+		log.Printf("put in %s fails %s", RANKING_TASK_MONI_QUEUE, err)
+		js, _ := json.Marshal(Status{"201", "操作失败"})
+		return http.StatusOK, string(js)
+	} else {
+		js, _ := json.Marshal(Status{"200", "操作成功"})
+		return http.StatusOK, string(js)
+	}
+}
 func taskResultApi(r *http.Request, w http.ResponseWriter, db *sql.DB, log *log.Logger,
 	redisPool *sexredis.RedisPool, cfg *Cfg, session sessions.Session) (int, string) {
 	data, err := ioutil.ReadAll(r.Body)
@@ -1258,4 +1315,29 @@ func addUserAction(r *http.Request, w http.ResponseWriter, db *sql.DB, log *log.
 	}
 	js, _ := json.Marshal(Status{"200", "操作成功"})
 	return http.StatusOK, string(js)
+}
+
+func getIpApi(r *http.Request, w http.ResponseWriter, log *log.Logger) (int, string) {
+	log.Printf("get internet interface ip")
+	resp, err := HttpGet("http://ip.cn")
+
+	if err != nil {
+		log.Printf("get ip fails %s", err)
+		js, _ := json.Marshal(IpDesc{})
+		return http.StatusOK, string(js)
+	}
+	doc, err := goquery.NewDocumentFromResponse(resp)
+	if err != nil {
+		log.Printf("go query create document fails %s", err)
+		js, _ := json.Marshal(IpDesc{})
+		return http.StatusOK, string(js)
+	}
+	defer resp.Body.Close()
+
+	ip := doc.Find("code").Text()
+	elem := doc.Find("#result").Text()
+	log.Printf("ip:%s, elem:%s", ip, elem)
+	js, _ := json.Marshal(IpDesc{ip, elem})
+	return http.StatusOK, string(js)
+
 }

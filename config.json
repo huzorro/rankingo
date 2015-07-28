@@ -2,6 +2,8 @@
 	"taskUri":"http://localhost:10086/api/task/onex",
 	"taskNUri":"http://localhost:10086/api/task/number",
 	"submitUri":"http://localhost:10086/api/task/result",
+	"logUri":"http://localhost:10086/api/task/log",
+	"moniUri":"http://localhost:10086/api/task/moni",
 	"rankPath":"ls",
 	"rankParam":"-ah",
 	"threadN":5,

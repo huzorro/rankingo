@@ -136,7 +136,8 @@ func (self *Order) SProcess(msg *sexredis.Msg) {
 		if err != nil {
 			msg.Err = errors.New("get order fails")
 			self.log.Printf("get order fails %s", err)
-			return
+			time.Sleep(3000 * time.Millisecond)
+			continue
 		}
 		body, err := ioutil.ReadAll(resp.Body)
 		self.log.Printf("%s", string(body))

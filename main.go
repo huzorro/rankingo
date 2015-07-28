@@ -29,6 +29,10 @@ type Cfg struct {
 	TaskNUri string `json:"taskNUri"`
 	//提交任务执行结果的api
 	SubmitUri string `json:"submitUri"`
+	//提交任务运行期日志
+	LogUri string `json:"logUri"`
+	//提交每次任务运行的服务器ip, 用于监控服务器和服务是否健康
+	MoniUri string `json:"moniUri"`
 	//rank进程路径
 	RankPath string `json:"rankPath"`
 	//rank进程参数
@@ -200,8 +204,11 @@ func main() {
 		mtn.Get("/api/task/one", taskOneApi)
 		mtn.Get("/api/task/onex", taskOnexApi)
 		mtn.Post("/api/task/result", taskResultApi)
+		mtn.Post("/api/task/log", taskLogApi)
+		mtn.Post("/api/task/moni", taskMoniApi)
 		mtn.Get("/api/task/number", taskNumberApi)
 		mtn.Get("/api/proxy/ua", proxyUaApi)
+
 	}
 	if *webPtr || *apiPtr {
 		go http.ListenAndServe(*portPtr, mtn)
@@ -312,9 +319,15 @@ func main() {
 	}
 
 	if *threadHandlerPtr {
+		//提供一个获取本机ip的方法
+		mtn = martini.Classic()
+		mtn.Map(logger)
+		mtn.Get("/api/get/ip", getIpApi)
+		go http.ListenAndServe(*portPtr, mtn)
+
 		queue := thread.New()
 		queue.SetRequestUri(cfg.TaskNUri)
-		queue.Worker(uint(cfg.ThreadN), true, &Control{&cfg, logger}, &Submit{&cfg, logger})
+		//		queue.Worker(uint(cfg.ThreadN), true, &Control{&cfg, logger}, &Submit{&cfg, logger})
 	}
 
 	if *regularPtr {
