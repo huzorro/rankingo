@@ -134,7 +134,7 @@ func (self *Order) SProcess(msg *sexredis.Msg) {
 			}
 		}()
 		if err != nil {
-			msg.Err = errors.New("get order fails")
+			//			msg.Err = errors.New("get order fails")
 			self.log.Printf("get order fails %s", err)
 			time.Sleep(3000 * time.Millisecond)
 			continue
@@ -183,9 +183,9 @@ func (self *Index) SProcess(msg *sexredis.Msg) {
 		resp, err := HttpGet(self.c.IndexApi + "?" + query)
 		defer resp.Body.Close()
 		if err != nil {
-			msg.Err = errors.New("get index fails")
+			//			msg.Err = errors.New("get index fails")
 			self.log.Printf("get index fails %s", err)
-			return
+			continue
 		}
 		body, err := ioutil.ReadAll(resp.Body)
 		self.log.Printf("%s", string(body))
@@ -229,8 +229,9 @@ func (self *Payment) SProcess(msg *sexredis.Msg) {
 		msg.Err = errors.New("row.Scan fails")
 		return
 	}
-	if balance > self.c.Owed {
+	if balance < self.c.Owed {
 		m.KeyMsg.Status = RANKING_STATUS_CANCEL
+		return
 	}
 
 	//根据指数和单价计算费用

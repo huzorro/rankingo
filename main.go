@@ -36,7 +36,7 @@ type Cfg struct {
 	//rank进程路径
 	RankPath string `json:"rankPath"`
 	//rank进程参数
-	RankParam string `json:"rankParam"`
+	RankParam []string `json:"rankParam"`
 	//任务执行进程数量
 	ThreadN int64 `json:"threadN"`
 	//任务执行超时时间
@@ -327,7 +327,7 @@ func main() {
 
 		queue := thread.New()
 		queue.SetRequestUri(cfg.TaskNUri)
-		//		queue.Worker(uint(cfg.ThreadN), true, &Control{&cfg, logger}, &Submit{&cfg, logger})
+		queue.Worker(uint(cfg.ThreadN), true, &Control{&cfg, logger}, &Submit{&cfg, logger})
 	}
 
 	if *regularPtr {

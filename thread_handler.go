@@ -10,6 +10,7 @@ import (
 	"net/http"
 	"os/exec"
 	"strings"
+	"time"
 )
 
 const (
@@ -37,7 +38,8 @@ func (self *Control) SProcess(msg *sexredis.Msg) {
 		return
 	}
 
-	cmd := exec.Command(self.c.RankPath, self.c.RankParam)
+	cmd := exec.Command(self.c.RankPath, self.c.RankParam...)
+
 	outPipe, err := cmd.StdoutPipe()
 	if err != nil {
 		self.log.Printf("get std out pipe fails %s", err)
@@ -57,6 +59,19 @@ func (self *Control) SProcess(msg *sexredis.Msg) {
 		msg.Err = errors.New("cmd exec fials")
 		return
 	}
+	var timer *time.Timer
+	timer = time.AfterFunc(6*time.Minute, func() {
+		timer.Stop()
+		if err := cmd.Process.Kill(); err != nil {
+			self.log.Printf("exec process timeout to kill fails %s", err)
+			msg.Content = "exec process timeout to kill fails"
+			return
+		} else {
+			self.log.Printf("exec process timeout to kill successed")
+			msg.Content = "exec process timeout to kill successed"
+			return
+		}
+	})
 	bytesErr, err := ioutil.ReadAll(errPipe)
 	if err != nil {
 		self.log.Printf("get bytes error from err pipe fails %s", err)
@@ -112,6 +127,7 @@ func (self *Submit) SProcess(msg *sexredis.Msg) {
 		return
 	}
 	body, err := ioutil.ReadAll(resp.Body)
+
 	if err != nil {
 		self.log.Printf("response body read fails %s", err)
 		msg.Err = errors.New("response body read fails")

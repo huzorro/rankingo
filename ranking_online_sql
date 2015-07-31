@@ -1,0 +1,341 @@
+-- MySQL dump 10.13  Distrib 5.5.41, for debian-linux-gnu (x86_64)
+--
+-- Host: localhost    Database: ranking
+-- ------------------------------------------------------
+-- Server version	5.5.41-0ubuntu0.14.04.1
+
+/*!40101 SET @OLD_CHARACTER_SET_CLIENT=@@CHARACTER_SET_CLIENT */;
+/*!40101 SET @OLD_CHARACTER_SET_RESULTS=@@CHARACTER_SET_RESULTS */;
+/*!40101 SET @OLD_COLLATION_CONNECTION=@@COLLATION_CONNECTION */;
+/*!40101 SET NAMES utf8 */;
+/*!40103 SET @OLD_TIME_ZONE=@@TIME_ZONE */;
+/*!40103 SET TIME_ZONE='+00:00' */;
+/*!40014 SET @OLD_UNIQUE_CHECKS=@@UNIQUE_CHECKS, UNIQUE_CHECKS=0 */;
+/*!40014 SET @OLD_FOREIGN_KEY_CHECKS=@@FOREIGN_KEY_CHECKS, FOREIGN_KEY_CHECKS=0 */;
+/*!40101 SET @OLD_SQL_MODE=@@SQL_MODE, SQL_MODE='NO_AUTO_VALUE_ON_ZERO' */;
+/*!40111 SET @OLD_SQL_NOTES=@@SQL_NOTES, SQL_NOTES=0 */;
+
+--
+-- Table structure for table `ranking_consume_log`
+--
+
+DROP TABLE IF EXISTS `ranking_consume_log`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!40101 SET character_set_client = utf8 */;
+CREATE TABLE `ranking_consume_log` (
+  `id` int(11) NOT NULL AUTO_INCREMENT,
+  `uid` int(11) NOT NULL DEFAULT '0',
+  `kid` int(11) NOT NULL DEFAULT '0',
+  `balance` int(11) NOT NULL DEFAULT '0',
+  `logtime` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (`id`)
+) ENGINE=InnoDB AUTO_INCREMENT=2 DEFAULT CHARSET=utf8;
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Dumping data for table `ranking_consume_log`
+--
+
+LOCK TABLES `ranking_consume_log` WRITE;
+/*!40000 ALTER TABLE `ranking_consume_log` DISABLE KEYS */;
+INSERT INTO `ranking_consume_log` VALUES (1,1,38,200,'2015-06-17 11:53:01');
+/*!40000 ALTER TABLE `ranking_consume_log` ENABLE KEYS */;
+UNLOCK TABLES;
+
+--
+-- Table structure for table `ranking_detail`
+--
+
+DROP TABLE IF EXISTS `ranking_detail`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!40101 SET character_set_client = utf8 */;
+CREATE TABLE `ranking_detail` (
+  `id` int(11) NOT NULL DEFAULT '0',
+  `uid` int(11) NOT NULL DEFAULT '0',
+  `owner` varchar(50) NOT NULL DEFAULT '',
+  `keyword` varchar(50) NOT NULL DEFAULT '',
+  `destlink` varchar(200) NOT NULL DEFAULT '',
+  `history_order` int(11) NOT NULL DEFAULT '0',
+  `current_order` int(11) NOT NULL DEFAULT '0',
+  `history_index` int(11) NOT NULL DEFAULT '0',
+  `current_index` int(11) NOT NULL DEFAULT '0',
+  `city_key` varchar(50) NOT NULL DEFAULT '',
+  `province_key` varchar(50) NOT NULL DEFAULT '',
+  `cost` int(11) NOT NULL DEFAULT '0',
+  `status` int(11) NOT NULL DEFAULT '1' COMMENT '0:start, 1:cancel',
+  `logtime` timestamp NOT NULL DEFAULT '0000-00-00 00:00:00',
+  `uptime` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `uk_keyword_destlink` (`keyword`,`destlink`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8;
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Dumping data for table `ranking_detail`
+--
+
+LOCK TABLES `ranking_detail` WRITE;
+/*!40000 ALTER TABLE `ranking_detail` DISABLE KEYS */;
+INSERT INTO `ranking_detail` VALUES (1,1,'','宁波金属回收','www.nb-fphs.com',50,50,0,200,'','',1000,0,'2015-07-29 08:25:36','2015-07-29 08:26:32');
+/*!40000 ALTER TABLE `ranking_detail` ENABLE KEYS */;
+UNLOCK TABLES;
+
+--
+-- Table structure for table `ranking_keyword`
+--
+
+DROP TABLE IF EXISTS `ranking_keyword`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!40101 SET character_set_client = utf8 */;
+CREATE TABLE `ranking_keyword` (
+  `id` int(11) NOT NULL AUTO_INCREMENT,
+  `msg` varchar(500) NOT NULL DEFAULT '',
+  `logtime` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  PRIMARY KEY (`id`)
+) ENGINE=InnoDB AUTO_INCREMENT=2 DEFAULT CHARSET=utf8;
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Dumping data for table `ranking_keyword`
+--
+
+LOCK TABLES `ranking_keyword` WRITE;
+/*!40000 ALTER TABLE `ranking_keyword` DISABLE KEYS */;
+INSERT INTO `ranking_keyword` VALUES (1,'{\"id\":0,\"Uid\":1,\"keyword\":\"宁波金属回收\",\"destlink\":\"www.nb-fphs.com\",\"Status\":0}','2015-07-29 08:25:35');
+/*!40000 ALTER TABLE `ranking_keyword` ENABLE KEYS */;
+UNLOCK TABLES;
+
+--
+-- Table structure for table `ranking_log`
+--
+
+DROP TABLE IF EXISTS `ranking_log`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!40101 SET character_set_client = utf8 */;
+CREATE TABLE `ranking_log` (
+  `logid` int(11) NOT NULL AUTO_INCREMENT,
+  `id` int(11) NOT NULL DEFAULT '0',
+  `uid` int(11) NOT NULL DEFAULT '0',
+  `owner` varchar(50) NOT NULL DEFAULT '',
+  `keyword` varchar(50) NOT NULL DEFAULT '',
+  `destlink` varchar(200) NOT NULL DEFAULT '',
+  `history_order` int(11) NOT NULL DEFAULT '0',
+  `current_order` int(11) NOT NULL DEFAULT '0',
+  `history_index` int(11) NOT NULL DEFAULT '0',
+  `current_index` int(11) NOT NULL DEFAULT '0',
+  `city_key` varchar(50) NOT NULL DEFAULT '',
+  `province_key` varchar(50) NOT NULL DEFAULT '',
+  `cost` int(11) NOT NULL DEFAULT '0',
+  `status` int(11) NOT NULL DEFAULT '1' COMMENT '0:stop, 1:cancel',
+  `logtime` timestamp NOT NULL DEFAULT '0000-00-00 00:00:00',
+  `uptime` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  PRIMARY KEY (`logid`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8;
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Dumping data for table `ranking_log`
+--
+
+LOCK TABLES `ranking_log` WRITE;
+/*!40000 ALTER TABLE `ranking_log` DISABLE KEYS */;
+/*!40000 ALTER TABLE `ranking_log` ENABLE KEYS */;
+UNLOCK TABLES;
+
+--
+-- Table structure for table `ranking_pay`
+--
+
+DROP TABLE IF EXISTS `ranking_pay`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!40101 SET character_set_client = utf8 */;
+CREATE TABLE `ranking_pay` (
+  `id` int(11) NOT NULL AUTO_INCREMENT,
+  `uid` int(11) NOT NULL DEFAULT '0',
+  `balance` int(11) NOT NULL DEFAULT '0',
+  `logtime` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `uk_pay_uid` (`uid`)
+) ENGINE=InnoDB AUTO_INCREMENT=3 DEFAULT CHARSET=utf8;
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Dumping data for table `ranking_pay`
+--
+
+LOCK TABLES `ranking_pay` WRITE;
+/*!40000 ALTER TABLE `ranking_pay` DISABLE KEYS */;
+INSERT INTO `ranking_pay` VALUES (1,1,15500,'2015-07-29 08:22:05');
+/*!40000 ALTER TABLE `ranking_pay` ENABLE KEYS */;
+UNLOCK TABLES;
+
+--
+-- Table structure for table `ranking_pay_log`
+--
+
+DROP TABLE IF EXISTS `ranking_pay_log`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!40101 SET character_set_client = utf8 */;
+CREATE TABLE `ranking_pay_log` (
+  `id` int(11) NOT NULL AUTO_INCREMENT,
+  `uid` int(11) NOT NULL DEFAULT '0',
+  `balance` int(11) NOT NULL DEFAULT '0',
+  `remark` varchar(100) NOT NULL DEFAULT '',
+  `logtime` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (`id`)
+) ENGINE=InnoDB AUTO_INCREMENT=10 DEFAULT CHARSET=utf8;
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Dumping data for table `ranking_pay_log`
+--
+
+LOCK TABLES `ranking_pay_log` WRITE;
+/*!40000 ALTER TABLE `ranking_pay_log` DISABLE KEYS */;
+INSERT INTO `ranking_pay_log` VALUES (1,1,1000,'充值','2015-06-17 11:24:05'),(2,1,200,'返点','2015-06-17 11:25:18'),(3,2,100,'充值','2015-06-18 11:04:44'),(4,1,1000,'充值','2015-07-29 07:42:46'),(5,1,1000,'充值','2015-07-29 07:43:26'),(6,1,20000,'充值','2015-07-29 08:17:42'),(7,1,5000,'充值','2015-07-29 08:17:51'),(8,1,12000,'充值','2015-07-29 08:21:56'),(9,1,3500,'充值','2015-07-29 08:22:05');
+/*!40000 ALTER TABLE `ranking_pay_log` ENABLE KEYS */;
+UNLOCK TABLES;
+
+--
+-- Table structure for table `sp_access_privilege`
+--
+
+DROP TABLE IF EXISTS `sp_access_privilege`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!40101 SET character_set_client = utf8 */;
+CREATE TABLE `sp_access_privilege` (
+  `id` int(11) NOT NULL AUTO_INCREMENT,
+  `pri_group` varchar(500) NOT NULL DEFAULT '' COMMENT '1;2;3;4;5',
+  `pri_rule` int(11) NOT NULL DEFAULT '0' COMMENT '1:all, 2:allow, 4:ban',
+  `logtime` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  PRIMARY KEY (`id`)
+) ENGINE=InnoDB AUTO_INCREMENT=4 DEFAULT CHARSET=utf8;
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Dumping data for table `sp_access_privilege`
+--
+
+LOCK TABLES `sp_access_privilege` WRITE;
+/*!40000 ALTER TABLE `sp_access_privilege` DISABLE KEYS */;
+INSERT INTO `sp_access_privilege` VALUES (1,'',1,'2015-06-03 08:35:45'),(2,'3',0,'2015-06-18 11:31:45'),(3,'4',0,'2015-06-18 11:33:34');
+/*!40000 ALTER TABLE `sp_access_privilege` ENABLE KEYS */;
+UNLOCK TABLES;
+
+--
+-- Table structure for table `sp_menu_template`
+--
+
+DROP TABLE IF EXISTS `sp_menu_template`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!40101 SET character_set_client = utf8 */;
+CREATE TABLE `sp_menu_template` (
+  `id` int(11) NOT NULL DEFAULT '0' COMMENT '1 2 4 8',
+  `title` varchar(100) NOT NULL DEFAULT '' COMMENT '关键词管理',
+  `name` varchar(100) NOT NULL DEFAULT '' COMMENT 'show',
+  `logtime` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  PRIMARY KEY (`id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8;
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Dumping data for table `sp_menu_template`
+--
+
+LOCK TABLES `sp_menu_template` WRITE;
+/*!40000 ALTER TABLE `sp_menu_template` DISABLE KEYS */;
+INSERT INTO `sp_menu_template` VALUES (1,'关键词管理','keyshow','2015-06-17 10:50:14'),(2,'充值记录','paylog','2015-06-17 10:21:46'),(4,'消费记录','consumelog','2015-06-17 11:42:55'),(8,'用户管理','usersview','2015-06-18 07:11:35');
+/*!40000 ALTER TABLE `sp_menu_template` ENABLE KEYS */;
+UNLOCK TABLES;
+
+--
+-- Table structure for table `sp_node_privilege`
+--
+
+DROP TABLE IF EXISTS `sp_node_privilege`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!40101 SET character_set_client = utf8 */;
+CREATE TABLE `sp_node_privilege` (
+  `id` int(11) NOT NULL DEFAULT '0',
+  `name` varchar(100) NOT NULL DEFAULT '',
+  `node` varchar(500) NOT NULL DEFAULT '' COMMENT '1:/login, 2:/login/check, 4:/logout, 8:/key/add, 16:/key/update, 32:/key/show, 64:/key/one',
+  `logtime` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  PRIMARY KEY (`id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8;
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Dumping data for table `sp_node_privilege`
+--
+
+LOCK TABLES `sp_node_privilege` WRITE;
+/*!40000 ALTER TABLE `sp_node_privilege` DISABLE KEYS */;
+INSERT INTO `sp_node_privilege` VALUES (1,'登录页','/login','2015-06-03 08:35:33'),(2,'登录验证请求','/login/check','2015-06-03 08:39:46'),(4,'退出登录','/logout','2015-06-03 08:40:33'),(8,'关键字添加','/key/add','2015-06-03 08:35:33'),(16,'关键字更新','/key/update','2015-06-03 08:35:33'),(32,'关键字列表','/keyshow','2015-06-17 10:49:33'),(64,'单个关键字','/key/one','2015-06-03 08:35:33'),(128,'充值记录','/paylog','2015-06-17 09:48:06'),(256,'首页','/','2015-06-17 11:00:43'),(512,'消费记录','/consumelog','2015-06-17 11:42:38'),(1024,'用户管理','/usersview','2015-06-18 07:11:16'),(2048,'查看用户','/user/view','2015-06-18 10:13:08'),(4096,'更新用户资料','/user/edit','2015-06-18 10:13:08'),(8192,'添加用户','/user/add','2015-06-18 10:13:08'),(16384,'充值','/pay','2015-06-18 10:13:08');
+/*!40000 ALTER TABLE `sp_node_privilege` ENABLE KEYS */;
+UNLOCK TABLES;
+
+--
+-- Table structure for table `sp_role`
+--
+
+DROP TABLE IF EXISTS `sp_role`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!40101 SET character_set_client = utf8 */;
+CREATE TABLE `sp_role` (
+  `id` int(11) NOT NULL DEFAULT '0',
+  `name` varchar(100) NOT NULL DEFAULT '' COMMENT 'user, services, admin, guess',
+  `privilege` int(11) NOT NULL DEFAULT '0',
+  `menu` int(11) NOT NULL DEFAULT '0',
+  `logtime` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  PRIMARY KEY (`id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8;
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Dumping data for table `sp_role`
+--
+
+LOCK TABLES `sp_role` WRITE;
+/*!40000 ALTER TABLE `sp_role` DISABLE KEYS */;
+INSERT INTO `sp_role` VALUES (1,'匿名用户',7,0,'2015-06-03 08:35:16'),(2,'管理员',32767,15,'2015-06-18 10:13:50'),(3,'普通用户',1023,7,'2015-06-18 10:44:41');
+/*!40000 ALTER TABLE `sp_role` ENABLE KEYS */;
+UNLOCK TABLES;
+
+--
+-- Table structure for table `sp_user`
+--
+
+DROP TABLE IF EXISTS `sp_user`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!40101 SET character_set_client = utf8 */;
+CREATE TABLE `sp_user` (
+  `id` int(11) NOT NULL AUTO_INCREMENT,
+  `username` varchar(100) NOT NULL DEFAULT '',
+  `password` varchar(100) NOT NULL DEFAULT '',
+  `roleid` int(11) NOT NULL DEFAULT '3',
+  `accessid` int(11) NOT NULL DEFAULT '0',
+  `logtime` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  PRIMARY KEY (`id`)
+) ENGINE=InnoDB AUTO_INCREMENT=5 DEFAULT CHARSET=utf8;
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Dumping data for table `sp_user`
+--
+
+LOCK TABLES `sp_user` WRITE;
+/*!40000 ALTER TABLE `sp_user` DISABLE KEYS */;
+INSERT INTO `sp_user` VALUES (1,'root','admin',2,1,'2015-06-03 08:35:04'),(2,'test1','test1',2,1,'2015-06-18 11:31:31'),(3,'test2','test2',3,2,'2015-06-18 11:33:47'),(4,'test31','test31',3,3,'2015-07-29 07:42:33');
+/*!40000 ALTER TABLE `sp_user` ENABLE KEYS */;
+UNLOCK TABLES;
+/*!40103 SET TIME_ZONE=@OLD_TIME_ZONE */;
+
+/*!40101 SET SQL_MODE=@OLD_SQL_MODE */;
+/*!40014 SET FOREIGN_KEY_CHECKS=@OLD_FOREIGN_KEY_CHECKS */;
+/*!40014 SET UNIQUE_CHECKS=@OLD_UNIQUE_CHECKS */;
+/*!40101 SET CHARACTER_SET_CLIENT=@OLD_CHARACTER_SET_CLIENT */;
+/*!40101 SET CHARACTER_SET_RESULTS=@OLD_CHARACTER_SET_RESULTS */;
+/*!40101 SET COLLATION_CONNECTION=@OLD_COLLATION_CONNECTION */;
+/*!40111 SET SQL_NOTES=@OLD_SQL_NOTES */;
+
+-- Dump completed on 2015-07-29 16:36:15

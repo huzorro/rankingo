@@ -24,7 +24,6 @@ func (self *RegularTasks) Handler(f func(r *RegularTasks)) {
 			select {
 			case <-timer.C:
 				go func() {
-					f(self)
 					if int64(time.Now().Hour()) == self.c.Timing {
 						f(self)
 
@@ -44,6 +43,13 @@ func rebuild() func(r *RegularTasks) {
 		}
 		var cur int64 = 0
 		//		mp := make(map[string]string)
+		//清空task queue
+		if n, err := redisClient.Del(RANKING_TASK_QUEUE); err != nil {
+			r.log.Printf("%s del fails %s", RANKING_TASK_QUEUE, err)
+			return
+		} else {
+			r.log.Printf("%s del successed N:%d", RANKING_TASK_QUEUE, n)
+		}
 		for {
 			res, _ := redisClient.HScan(RANKING_KEYWORD_HASH, int64(cur))
 			for _, v := range res {
