@@ -57,6 +57,8 @@ type Cfg struct {
 	Interval int64 `json:"interval"`
 	//符合预期的时间点
 	Timing int64 `json:"timing"`
+	//定时任务的crontab
+	Crontab string `json:"crontab"`
 	//页宽
 	PageSize int64 `json:"pageSize"`
 	//欠费容忍度 例如余额小于 < -1000
@@ -327,12 +329,13 @@ func main() {
 
 		queue := thread.New()
 		queue.SetRequestUri(cfg.TaskNUri)
-		queue.Worker(uint(cfg.ThreadN), true, &Control{&cfg, logger}, &Submit{&cfg, logger})
+		queue.SetAdsl(cfg.AdslCName, cfg.AdslUser, cfg.AdslPasswd, logger)
+		queue.Worker(uint(cfg.ThreadN), true, &Control{&cfg, logger})
 	}
 
 	if *regularPtr {
 		rt := &RegularTasks{&cfg, logger, redisPool, db}
-		rt.Handler(rebuild())
+		rt.Handler()
 	}
 	done := make(chan bool)
 	<-done

@@ -40,19 +40,19 @@ func (self *Control) SProcess(msg *sexredis.Msg) {
 
 	cmd := exec.Command(self.c.RankPath, self.c.RankParam...)
 
-	outPipe, err := cmd.StdoutPipe()
-	if err != nil {
-		self.log.Printf("get std out pipe fails %s", err)
-		msg.Err = errors.New("get std out pipe fails")
-		return
-	}
+	//	outPipe, err := cmd.StdoutPipe()
+	//	if err != nil {
+	//		self.log.Printf("get std out pipe fails %s", err)
+	//		msg.Err = errors.New("get std out pipe fails")
+	//		return
+	//	}
 
-	errPipe, err := cmd.StderrPipe()
-	if err != nil {
-		self.log.Printf("get std err pipe fails %s", err)
-		msg.Err = errors.New("get std err pipe fails")
-		return
-	}
+	//	errPipe, err := cmd.StderrPipe()
+	//	if err != nil {
+	//		self.log.Printf("get std err pipe fails %s", err)
+	//		msg.Err = errors.New("get std err pipe fails")
+	//		return
+	//	}
 
 	if err := cmd.Start(); err != nil {
 		self.log.Printf("cmd exec fails %s", err)
@@ -64,35 +64,41 @@ func (self *Control) SProcess(msg *sexredis.Msg) {
 		timer.Stop()
 		if err := cmd.Process.Kill(); err != nil {
 			self.log.Printf("exec process timeout to kill fails %s", err)
-			msg.Content = "exec process timeout to kill fails"
+			msg.Err = errors.New("exec process timeout to kill fails")
 			return
 		} else {
 			self.log.Printf("exec process timeout to kill successed")
-			msg.Content = "exec process timeout to kill successed"
+			msg.Err = errors.New("exec process timeout to kill successed")
 			return
 		}
 	})
-	bytesErr, err := ioutil.ReadAll(errPipe)
-	if err != nil {
-		self.log.Printf("get bytes error from err pipe fails %s", err)
-		msg.Err = errors.New("get bytes error from err pipe fails")
-		return
-	}
 
-	if len(bytesErr) != 0 {
-		self.log.Printf("cmd exec fails %s", string(bytesErr))
-		msg.Err = errors.New("cmd exec fails")
-		return
-	}
-	bytesResult, err := ioutil.ReadAll(outPipe)
+	//	bytesErr, err := ioutil.ReadAll(errPipe)
+	//	if err != nil {
+	//		self.log.Printf("get bytes error from err pipe fails %s", err)
+	//		msg.Err = errors.New("get bytes error from err pipe fails")
+	//		return
+	//	}
 
-	if err != nil {
-		self.log.Printf("get cmd exec result fails %s", err)
-		msg.Err = errors.New("get cmd exec result fails")
+	//	if len(bytesErr) != 0 {
+	//		self.log.Printf("cmd exec fails %s", string(bytesErr))
+	//		msg.Err = errors.New("cmd exec fails")
+	//		return
+	//	}
+	//	bytesResult, err := ioutil.ReadAll(outPipe)
+
+	//	if err != nil {
+	//		self.log.Printf("get cmd exec result fails %s", err)
+	//		msg.Err = errors.New("get cmd exec result fails")
+	//		return
+	//	}
+	//	self.log.Printf("read exec result:%s", string(bytesResult))
+	//	msg.Content = string(bytesResult)
+	if err := cmd.Wait(); err != nil {
+		self.log.Printf("cmd wait fails %s", err)
 		return
 	}
-	self.log.Printf(string(bytesResult))
-	msg.Content = string(bytesResult)
+	timer.Stop()
 }
 
 func (self *Submit) SProcess(msg *sexredis.Msg) {
@@ -134,5 +140,5 @@ func (self *Submit) SProcess(msg *sexredis.Msg) {
 		return
 	}
 	defer resp.Body.Close()
-	self.log.Printf(string(body))
+	self.log.Printf("submit response : %s", string(body))
 }

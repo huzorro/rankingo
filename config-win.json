@@ -17,6 +17,7 @@
 	"dburi":"ranking:woai840511~@tcp(127.0.0.1:3306)/ranking?charset=utf8",
 	"interval":10,
 	"timing":0,
+	"crontab":"0 10 0 * * *",
 	"pageSize":5,
 	"owed":-1000,
 	"price":5,

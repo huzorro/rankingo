@@ -625,14 +625,15 @@ func taskOnexApi(r *http.Request, w http.ResponseWriter, log *log.Logger,
 		h := fmt.Sprint(time.Now().Hour())
 
 		msg.NormMsg.Hour[h] = msg.NormMsg.Hour[h] - 1
-		if msg.NormMsg.Hour[h] < 0 {
-			js, _ := json.Marshal(Status{"202", "该时段任务达标"})
-			return http.StatusOK, string(js)
-		}
+
 		msg.InitTime = time.Now().UnixNano() / (1000 * 1000)
 		js, _ := json.Marshal(msg)
 		if _, err := redisClient.RPush(RANKING_TASK_QUEUE, js); err != nil {
 			log.Printf("put end of the queue fails %s", err)
+		}
+		if msg.NormMsg.Hour[h] < 0 {
+			js, _ := json.Marshal(Status{"202", "该时段任务达标"})
+			return http.StatusOK, string(js)
 		}
 		return http.StatusOK, string(m)
 	} else {
@@ -1332,7 +1333,11 @@ func getIpApi(r *http.Request, w http.ResponseWriter, log *log.Logger) (int, str
 		js, _ := json.Marshal(IpDesc{})
 		return http.StatusOK, string(js)
 	}
-	defer resp.Body.Close()
+	defer func() {
+		if resp != nil {
+			resp.Body.Close()
+		}
+	}()
 
 	ip := doc.Find("code").Text()
 	elem := doc.Find("#result").Text()

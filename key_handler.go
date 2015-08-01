@@ -181,10 +181,15 @@ func (self *Index) SProcess(msg *sexredis.Msg) {
 	self.log.Printf("%s", self.c.IndexApi+"?"+query)
 	for {
 		resp, err := HttpGet(self.c.IndexApi + "?" + query)
-		defer resp.Body.Close()
+		defer func() {
+			if resp != nil {
+				resp.Body.Close()
+			}
+		}()
 		if err != nil {
 			//			msg.Err = errors.New("get index fails")
 			self.log.Printf("get index fails %s", err)
+			time.Sleep(3000 * time.Millisecond)
 			continue
 		}
 		body, err := ioutil.ReadAll(resp.Body)
