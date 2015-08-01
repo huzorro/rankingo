@@ -324,6 +324,7 @@ func main() {
 		//提供一个获取本机ip的方法
 		mtn = martini.Classic()
 		mtn.Map(logger)
+		mtn.Map(&cfg)
 		mtn.Get("/api/get/ip", getIpApi)
 		go http.ListenAndServe(*portPtr, mtn)
 
