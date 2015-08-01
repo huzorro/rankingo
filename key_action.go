@@ -1318,12 +1318,32 @@ func addUserAction(r *http.Request, w http.ResponseWriter, db *sql.DB, log *log.
 	return http.StatusOK, string(js)
 }
 
-func getIpApi(r *http.Request, w http.ResponseWriter, log *log.Logger) (int, string) {
+func getIpApi(r *http.Request, w http.ResponseWriter, log *log.Logger, cfg *Cfg) (int, string) {
 	log.Printf("get internet interface ip")
 	resp, err := HttpGet("http://ip.cn")
 
 	if err != nil {
 		log.Printf("get ip fails %s", err)
+		log.Printf("access net fails to disAdsl then reconnect")
+		//挂断
+		log.Printf("adsl disconnecting cname:%s user:%s passwd:%s", cfg.AdslCName, cfg.AdslUser, cfg.AdslPasswd)
+		if rs, err := ExeCmd("rasdial", cfg.AdslCName, "/disconnect"); err != nil {
+			log.Printf("adsl disconnect fails cname:%s, rs:%s, err:%s", cfg.AdslCName, rs, err)
+		} else {
+			log.Printf("adsl disconnected cname:%s, rs:%s", cfg.AdslCName, rs)
+		}
+		//重拨
+		for {
+			time.Sleep(10e9)
+			log.Printf("adsl connecting cname:%s user:%s passwd:%s", cfg.AdslCName, cfg.AdslUser, cfg.AdslPasswd)
+			if rs, err := ExeCmd("rasdial", cfg.AdslCName, cfg.AdslUser, cfg.AdslPasswd); err == nil {
+				log.Printf("adsl connecting %s %s", cfg.AdslCName, rs)
+				break
+			} else {
+				log.Printf("%s %s %s", cfg.AdslCName, rs, err)
+				continue
+			}
+		}
 		js, _ := json.Marshal(IpDesc{})
 		return http.StatusOK, string(js)
 	}
@@ -1334,7 +1354,7 @@ func getIpApi(r *http.Request, w http.ResponseWriter, log *log.Logger) (int, str
 		return http.StatusOK, string(js)
 	}
 	defer func() {
-		if resp != nil {
+		if resp != nil && err != nil {
 			resp.Body.Close()
 		}
 	}()

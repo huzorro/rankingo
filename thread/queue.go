@@ -41,10 +41,44 @@ func (self *Queue) Get() sexredis.Msg {
 		msg sexredis.Msg
 	)
 	resp, err := http.Get(self.uri)
-	defer resp.Body.Close()
+	defer func() {
+		if resp != nil && err != nil {
+			resp.Body.Close()
+		}
+	}()
 	if err != nil {
 		// handle error
 		msg.Err = errors.New("thread queue request data fails")
+		//挂断 重拨
+		self.log.Printf("access net fails to disadsl then reconnect %s", msg.Err)
+		//挂断adsl
+		for {
+			self.log.Printf("adsl disconnecting cname:%s", self.adslCName)
+
+			if rs, err := self.AdslDisconnect(); err == nil {
+				self.log.Printf("adsl disconnected cname:%s, result:%s", self.adslCName, rs)
+				break
+
+			} else {
+				self.log.Printf("adsl disconnected fails cname:%s, result:%s, err:%s", self.adslCName, rs, err)
+				continue
+			}
+		}
+		time.Sleep(5000 * time.Millisecond * 2)
+		//adsl拨号
+		for {
+			self.log.Printf("adsl connecting cname:%s, user:%s, passwd:%s", self.adslCName, self.adslUser, self.adslPasswd)
+
+			if rs, err := self.AdslConnect(); err == nil {
+				self.log.Printf("adsl connected  cname:%s, result:%s", self.adslCName, rs)
+				break
+			} else {
+				self.log.Printf("adsl connect fails cname:%s, result:%s, err:%s", self.adslCName, rs, err)
+				continue
+			}
+		}
+		time.Sleep(5000 * time.Millisecond)
+
 	} else {
 		body, err := ioutil.ReadAll(resp.Body)
 		if err != nil {
@@ -124,7 +158,7 @@ func (self *Queue) Worker(pnum uint, serial bool, ps ...sexredis.Processor) {
 					continue
 				}
 			}
-			time.Sleep(5000 * time.Millisecond)
+			time.Sleep(5000 * time.Millisecond * 2)
 			//adsl拨号
 			for {
 				self.log.Printf("adsl connecting cname:%s, user:%s, passwd:%s", self.adslCName, self.adslUser, self.adslPasswd)
