@@ -11,7 +11,7 @@
 	"Authorization":"",
 	"Content-Type":"",
 	"Accept":"",
-	"oiRatio":0.1,
+	"oiRatio":0.6,
 	"nIBase":200,
 	"dbtype":"mysql",
 	"dburi":"ranking:woai840511~@tcp(localhost:3306)/ranking?charset=utf8",

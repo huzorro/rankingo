@@ -304,7 +304,7 @@ func (self *NormCreate) SProcess(msg *sexredis.Msg) {
 	//生成24小时的正态分布数据 样本数量1000
 	nt := normByTime(-1.2, 1.2, 0.1, 1000)
 	for k, v := range nt {
-		m.Hour[fmt.Sprint(k)] = int64(math.Floor(float64(m.CIndex) * v))
+		m.Hour[fmt.Sprint(k)] = int64(math.Floor(float64(m.CIndex) * self.c.OIRatio * v))
 	}
 	msg.Content = m
 }
