@@ -1321,7 +1321,11 @@ func addUserAction(r *http.Request, w http.ResponseWriter, db *sql.DB, log *log.
 func getIpApi(r *http.Request, w http.ResponseWriter, log *log.Logger, cfg *Cfg) (int, string) {
 	log.Printf("get internet interface ip")
 	resp, err := HttpGet("http://ip.cn")
-
+	defer func() {
+		if resp != nil {
+			resp.Body.Close()
+		}
+	}()
 	if err != nil {
 		log.Printf("get ip fails %s", err)
 		log.Printf("access net fails to disAdsl then reconnect")
@@ -1353,11 +1357,6 @@ func getIpApi(r *http.Request, w http.ResponseWriter, log *log.Logger, cfg *Cfg)
 		js, _ := json.Marshal(IpDesc{})
 		return http.StatusOK, string(js)
 	}
-	defer func() {
-		if resp != nil && err != nil {
-			resp.Body.Close()
-		}
-	}()
 
 	ip := doc.Find("code").Text()
 	elem := doc.Find("#result").Text()

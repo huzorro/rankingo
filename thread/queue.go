@@ -42,7 +42,7 @@ func (self *Queue) Get() sexredis.Msg {
 	)
 	resp, err := http.Get(self.uri)
 	defer func() {
-		if resp != nil && err != nil {
+		if resp != nil {
 			resp.Body.Close()
 		}
 	}()
