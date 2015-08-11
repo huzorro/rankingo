@@ -5,10 +5,13 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"github.com/PuerkitoBio/goquery"
+	//"github.com/djimenez/iconv-go"
 	"github.com/huzorro/spfactor/sexredis"
 	"io/ioutil"
 	"log"
 	"math"
+	"math/rand"
 	"net/url"
 	"strconv"
 	"strings"
@@ -106,6 +109,94 @@ type Payment struct {
 	db  *sql.DB
 }
 
+type VerifyKey struct {
+	c   *Cfg
+	log *log.Logger
+	db  *sql.DB
+}
+
+//校验目标页面是否存在指定关键字
+func (self VerifyKey) SProcess(msg *sexredis.Msg) {
+	self.log.Printf("verify keyword is valid?")
+	var keymsg KeyMsg
+	//msg type ok?
+	m := msg.Content.(string)
+	if err := json.Unmarshal([]byte(m), &keymsg); err != nil {
+		self.log.Printf("Unmarshal json fails %s", err)
+		msg.Err = errors.New("Unmarshal json fails")
+		return
+	}
+	resp, err := HttpGet("http://" + keymsg.Destlink)
+	defer func() {
+		if resp != nil {
+			resp.Body.Close()
+		}
+	}()
+	if err != nil {
+		self.log.Printf("verify keyword fails %s", err)
+		msg.Err = errors.New("verify keyword is fails")
+		return
+	}
+	doc, err := goquery.NewDocumentFromResponse(resp)
+
+	if err != nil {
+		self.log.Printf("get dest link page  document fails %s", err)
+		msg.Err = errors.New("get dest link page  document fails")
+		return
+	}
+
+	doc.Find("meta").EachWithBreak(func(i int, s *goquery.Selection) bool {
+		if c, f := s.Attr("name"); f {
+			if strings.Contains(strings.ToLower(c), "keywords") {
+				if keywords, f := s.Attr("content"); f {
+					utf8, _ := GbkToUtf8([]byte(keywords))
+					//utf8, _ := iconv.ConvertString(keywords, "gbk", "utf-8")
+					self.log.Printf("%s, %s", keywords, string(utf8))
+					g := strings.Contains(keywords, keymsg.Keyword)
+					//u := strings.Contains(utf8, keymsg.Keyword)
+					u := strings.Contains(string(utf8), keymsg.Keyword)
+					if g || u {
+						self.log.Printf("%s in %s found", keymsg.Keyword, keymsg.Destlink)
+						msg.Content = keymsg
+						msg.Err = nil
+						return false
+					} else {
+						self.log.Printf("%s in %s not found", keymsg.Keyword, keymsg.Destlink)
+						msg.Err = errors.New("verify keyword fails")
+						return true
+					}
+				} else {
+					self.log.Printf("%s in %s not found", keymsg.Keyword, keymsg.Destlink)
+					msg.Err = errors.New("verify keyword fails")
+					return true
+				}
+			} else {
+				self.log.Printf("%s in %s not found", keymsg.Keyword, keymsg.Destlink)
+				msg.Err = errors.New("verify keyword fails")
+				return true
+			}
+		} else {
+			self.log.Printf("%s in %s not found", keymsg.Keyword, keymsg.Destlink)
+			msg.Err = errors.New("verify keyword fails")
+			return true
+		}
+	})
+	//	if text := doc.Find("head").Text(); text != "" {
+	//		utf8, _ := iconv.ConvertString(text, "gbk", "utf-8")
+	//		self.log.Printf("%s, %s", text, utf8)
+	//		f := strings.Contains(text, keymsg.Keyword)
+	//		u := strings.Contains(utf8, keymsg.Keyword)
+	//		if f || u {
+	//			self.log.Printf("%s in %s found", keymsg.Keyword, keymsg.Destlink)
+	//			msg.Content = keymsg
+	//		} else {
+	//			self.log.Printf("%s in %s not found", keymsg.Keyword, keymsg.Destlink)
+	//			msg.Err = errors.New("verify keyword fails")
+	//			return
+	//		}
+	//	}
+}
+
 func (self *Order) SProcess(msg *sexredis.Msg) {
 	self.log.Printf("get order .....")
 	//msg type ok?
@@ -114,12 +205,13 @@ func (self *Order) SProcess(msg *sexredis.Msg) {
 		normsg NormMsg
 		or     OrderResult
 	)
-	m := msg.Content.(string)
-	if err := json.Unmarshal([]byte(m), &keymsg); err != nil {
-		self.log.Printf("Unmarshal json fails %s", err)
-		msg.Err = errors.New("Unmarshal json fails")
-		return
-	}
+	//	m := msg.Content.(string)
+	//	if err := json.Unmarshal([]byte(m), &keymsg); err != nil {
+	//		self.log.Printf("Unmarshal json fails %s", err)
+	//		msg.Err = errors.New("Unmarshal json fails")
+	//		return
+	//	}
+	keymsg = msg.Content.(KeyMsg)
 	urlValues := url.Values{}
 	urlValues.Add("key", self.c.OrderApiKey)
 	urlValues.Add("host", keymsg.Destlink)
@@ -303,8 +395,16 @@ func (self *NormCreate) SProcess(msg *sexredis.Msg) {
 	m.Hour = make(map[string]int64)
 	//生成24小时的正态分布数据 样本数量1000
 	nt := normByTime(-1.2, 1.2, 0.1, 1000)
+	//随机种子
+	r := rand.New(rand.NewSource(time.Now().UnixNano()))
+	var ratio int64
+	if m.COrder > 10 {
+		ratio = r.Int63n(self.c.NIRatio[1]-self.c.NIRatio[0]) + self.c.NIRatio[0]
+	} else {
+		ratio = r.Int63n(self.c.OneIRatio[1]-self.c.OneIRatio[0]) + self.c.OneIRatio[0]
+	}
 	for k, v := range nt {
-		m.Hour[fmt.Sprint(k)] = int64(math.Floor(float64(m.CIndex) * self.c.OIRatio * v))
+		m.Hour[fmt.Sprint(k)] = int64(math.Floor(float64(m.CIndex) * (float64(ratio) / float64(100)) * v))
 	}
 	msg.Content = m
 }

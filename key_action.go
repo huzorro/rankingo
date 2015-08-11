@@ -724,6 +724,7 @@ func taskLogApi(r *http.Request, w http.ResponseWriter, db *sql.DB, log *log.Log
 func taskMoniApi(r *http.Request, w http.ResponseWriter, db *sql.DB, log *log.Logger,
 	redisPool *sexredis.RedisPool, cfg *Cfg, session sessions.Session) (int, string) {
 	data, err := ioutil.ReadAll(r.Body)
+	dUn, err := url.QueryUnescape(string(data))
 	defer r.Body.Close()
 	if err != nil {
 		log.Printf("json read fails %s", err)
@@ -737,7 +738,7 @@ func taskMoniApi(r *http.Request, w http.ResponseWriter, db *sql.DB, log *log.Lo
 		js, _ := json.Marshal(Status{"201", "操作失败"})
 		return http.StatusOK, string(js)
 	}
-	if _, err := redisClient.RPush(RANKING_TASK_MONI_QUEUE, data); err != nil {
+	if _, err := redisClient.RPush(RANKING_TASK_MONI_QUEUE, dUn); err != nil {
 		log.Printf("put in %s fails %s", RANKING_TASK_MONI_QUEUE, err)
 		js, _ := json.Marshal(Status{"201", "操作失败"})
 		return http.StatusOK, string(js)
@@ -749,6 +750,7 @@ func taskMoniApi(r *http.Request, w http.ResponseWriter, db *sql.DB, log *log.Lo
 func taskResultApi(r *http.Request, w http.ResponseWriter, db *sql.DB, log *log.Logger,
 	redisPool *sexredis.RedisPool, cfg *Cfg, session sessions.Session) (int, string) {
 	data, err := ioutil.ReadAll(r.Body)
+	dUn, err := url.QueryUnescape(string(data))
 	defer r.Body.Close()
 	if err != nil {
 		log.Printf("json read fails %s", err)
@@ -762,7 +764,7 @@ func taskResultApi(r *http.Request, w http.ResponseWriter, db *sql.DB, log *log.
 		js, _ := json.Marshal(Status{"201", "操作失败"})
 		return http.StatusOK, string(js)
 	}
-	if _, err := redisClient.RPush(RANKING_TASK_RESULT_QUEUE, data); err != nil {
+	if _, err := redisClient.RPush(RANKING_TASK_RESULT_QUEUE, dUn); err != nil {
 		log.Printf("put in %s fails %s", RANKING_TASK_RESULT_QUEUE, err)
 		js, _ := json.Marshal(Status{"201", "操作失败"})
 		return http.StatusOK, string(js)

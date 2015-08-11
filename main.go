@@ -47,6 +47,10 @@ type Cfg struct {
 	Accept        string `json:"Accept"`
 	//指数排名的百分比
 	OIRatio float64 `json:"oiRatio"`
+	//第一页的指数随机百分比
+	OneIRatio []int64 `json:"oneiRatio"`
+	//非第一页的指数随机百分比
+	NIRatio []int64 `json:"niRatio"`
 	//无指数关键字的基础百分比
 	NIBase int64 `json:"nIBase"`
 	//数据库类型
@@ -114,6 +118,7 @@ func main() {
 	adslPtr := flag.Bool("adsl", false, "adsl connect")
 	disAdslPtr := flag.Bool("disAdsl", false, "adsl disconnect")
 	regularPtr := flag.Bool("regular", false, "regular task start")
+	resultPtr := flag.Bool("result", false, "result put in db start")
 	flag.Parse()
 
 	//json config
@@ -226,7 +231,7 @@ func main() {
 		queue := sexredis.New()
 		queue.SetRClient(RANKING_KEYWORD_QUEUE, rc)
 		logger.Printf("key handler start.....")
-		queue.Worker(5, true, &Order{&cfg, logger, redisPool}, &Index{&cfg, logger, redisPool},
+		queue.Worker(5, true, &VerifyKey{&cfg, logger, db}, &Order{&cfg, logger, redisPool}, &Index{&cfg, logger, redisPool},
 			&Payment{&cfg, logger, db}, &NormCreate{&cfg, logger, db},
 			&PutInTask{&cfg, logger, redisPool}, &Recoder{&cfg, logger, db}, &OrderLog{&cfg, logger, db})
 	}
@@ -337,6 +342,19 @@ func main() {
 	if *regularPtr {
 		rt := &RegularTasks{&cfg, logger, redisPool, db}
 		rt.Handler()
+	}
+
+	if *resultPtr {
+		rc, err := redisPool.Get()
+		defer redisPool.Close(rc)
+		if err != nil {
+			logger.Printf("get redis connection fails %s", err)
+			return
+		}
+		queue := sexredis.New()
+		queue.SetRClient(RANKING_TASK_RESULT_QUEUE, rc)
+		logger.Printf("result handler start.....")
+		queue.Worker(5, true, &RankResult{&cfg, logger, db})
 	}
 	done := make(chan bool)
 	<-done
