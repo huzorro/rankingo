@@ -165,3 +165,30 @@ CREATE TABLE ranking_consume_log (
 
 INSERT INTO ranking_consume_log(uid, kid, balance) VALUES(1, 38, 200)
 
+CREATE TABLE ranking_moni_log (
+
+)ENGINE=InnoDB DEFAULT CHARSET=utf8
+
+CREATE TABLE ranking_result_log (
+    id int NOT NULL AUTO_INCREMENT,
+    itime int NOT NULL DEFAULT 0,
+    corder int NOT NULL DEFAULT 0,
+    horder int NOT NULL DEFAULT 0,
+    cindex int NOT NULL DEFAULT 0,
+    hindex int NOT NULL DEFAULT 0,
+    cost int NOT NULL DEFAULT 0,
+    hours varchar(300) NOT NULL DEFAULT "",
+    cancel boolean NOT NULL DEFAULT false,
+    vpsip varchar(200) NOT NULL DEFAULT "",
+    adsltext varchar(300) NOT NULL DEFAULT "",
+    keyid int NOT NULL DEFAULT 0,
+    uid int NOT NULL DEFAULT 0,
+    owner varchar(200) NOT NULL DEFAULT "",
+    keyword varchar(200) NOT NULL DEFAULT "",
+    destlink varchar(200) NOT NULL DEFAULT "",
+    city varchar(50) NOT NULL DEFAULT "",
+    province varchar(50) NOT NULL DEFAULT "",
+    status int NOT NULL DEFAULT 0,    
+    ilogtime varchar NOT NULL DEFAULT "",
+    logtime timestamp NOT NULL DEFAULT current_timestamp,
+)ENGINE=InnoDB DEFAULT CHARSET=utf8
