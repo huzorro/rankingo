@@ -12,6 +12,8 @@
 	"Content-Type":"",
 	"Accept":"",
 	"oiRatio":0.1,
+	"oneiRatio":[30,50],
+	"niRatio":[50,80],	
 	"nIBase":200,
 	"dbtype":"mysql",
 	"dburi":"ranking:woai840511~@tcp(127.0.0.1:3306)/ranking?charset=utf8",
