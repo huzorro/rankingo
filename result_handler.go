@@ -14,6 +14,39 @@ type RankResult struct {
 	db  *sql.DB
 }
 
+type UpdateOrder struct {
+	c   *Cfg
+	log *log.Logger
+	db  *sql.DB
+}
+
+//根据刷新成功的结果 更新排名
+func (self *UpdateOrder) SProcess(msg *sexredis.Msg) {
+	self.log.Printf("update order of rank result")
+	//msg type ok?
+	if _, ok := msg.Content.(TaskMsg); !ok {
+		msg.Err = errors.New("msg type errors")
+		return
+	}
+	m := msg.Content.(TaskMsg)
+	stmtIn, err := self.db.Prepare(`UPDATE ranking_detail SET current_order = ? WHERE keyword = ? AND destlink = ?`)
+	if err != nil {
+		self.log.Printf("db.Prepare exec fails %s", err)
+		msg.Err = errors.New("db.Prepare exec fails")
+		return
+	}
+	defer stmtIn.Close()
+	if rs, err := stmtIn.Exec(m.NormMsg.COrder, m.NormMsg.KeyMsg.Keyword, m.NormMsg.KeyMsg.Destlink); err != nil {
+		self.log.Printf("update order fails %s", err)
+		msg.Err = errors.New("update order fails")
+		return
+	} else {
+		id, _ := rs.RowsAffected()
+		self.log.Printf("update order success of RowsAffected=%d", id)
+	}
+
+}
+
 //客户端提交的结果数据入库
 func (self *RankResult) SProcess(msg *sexredis.Msg) {
 	self.log.Printf("rank result put in db")
@@ -56,8 +89,8 @@ func (self *RankResult) SProcess(msg *sexredis.Msg) {
 		msg.Err = errors.New("rank result put in db fails")
 		return
 	} else {
+		msg.Content = taskMsg
 		lastId, _ := rs.LastInsertId()
 		self.log.Printf("rank result put in db success of LastInsertId=%d", lastId)
 	}
-
 }

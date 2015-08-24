@@ -362,7 +362,7 @@ func main() {
 		queue := sexredis.New()
 		queue.SetRClient(RANKING_TASK_RESULT_QUEUE, rc)
 		logger.Printf("result handler start.....")
-		queue.Worker(5, true, &RankResult{&cfg, logger, db})
+		queue.Worker(5, true, &RankResult{&cfg, logger, db}, &UpdateOrder{&cfg, logger, db})
 	}
 	done := make(chan bool)
 	<-done
