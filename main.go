@@ -37,6 +37,14 @@ type Cfg struct {
 	RankPath string `json:"rankPath"`
 	//rank进程参数
 	RankParam []string `json:"rankParam"`
+	//rank mobile 参数
+	RankMobileParam []string `json:"rankMobileParam"`
+	//rank pc
+	RankPc bool `json:"rankPc"`
+	//rank mobile
+	RankMobile bool `json:"rankMobile"`
+	//rank mix
+	RankMix bool `json:"rankMix"`
 	//任务执行进程数量
 	ThreadN int64 `json:"threadN"`
 	//任务执行超时时间

@@ -7,6 +7,7 @@ import (
 	"github.com/huzorro/spfactor/sexredis"
 	"io/ioutil"
 	"log"
+	"math/rand"
 	"net/http"
 	"os/exec"
 	"strings"
@@ -37,9 +38,21 @@ func (self *Control) SProcess(msg *sexredis.Msg) {
 		msg.Err = errors.New("Msg type error")
 		return
 	}
-
-	cmd := exec.Command(self.c.RankPath, self.c.RankParam...)
-
+	//随机种子
+	r := rand.New(rand.NewSource(time.Now().UnixNano()))
+	radio := r.Int63n(2)
+	rankParams := [2][]string{self.c.RankParam, self.c.RankMobileParam}
+	var cmd *exec.Cmd
+	switch true {
+	case self.c.RankMix:
+		cmd = exec.Command(self.c.RankPath, rankParams[radio]...)
+	case self.c.RankPc:
+		cmd = exec.Command(self.c.RankPath, rankParams[0]...)
+	case self.c.RankMobile:
+		cmd = exec.Command(self.c.RankPath, rankParams[1]...)
+	default:
+		cmd = exec.Command(self.c.RankPath, self.c.RankParam...)
+	}
 	//	outPipe, err := cmd.StdoutPipe()
 	//	if err != nil {
 	//		self.log.Printf("get std out pipe fails %s", err)
