@@ -29,6 +29,10 @@ func (self *UpdateOrder) SProcess(msg *sexredis.Msg) {
 		return
 	}
 	m := msg.Content.(TaskMsg)
+	if m.NormMsg.KeyMsg.Status == 100 {
+		self.log.Printf("not update so mobile rank")
+		return
+	}
 	stmtIn, err := self.db.Prepare(`UPDATE ranking_detail SET current_order = ? WHERE keyword = ? AND destlink = ?`)
 	if err != nil {
 		self.log.Printf("db.Prepare exec fails %s", err)
