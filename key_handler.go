@@ -28,12 +28,14 @@ type Order struct {
 	c   *Cfg
 	log *log.Logger
 	p   *sexredis.RedisPool
+	db  *sql.DB
 }
 
 type Index struct {
 	c   *Cfg
 	log *log.Logger
 	p   *sexredis.RedisPool
+	db  *sql.DB
 }
 
 //放入norm队列
@@ -204,6 +206,7 @@ func (self *Order) SProcess(msg *sexredis.Msg) {
 		keymsg KeyMsg
 		normsg NormMsg
 		or     OrderResult
+		count  int
 	)
 	//	m := msg.Content.(string)
 	//	if err := json.Unmarshal([]byte(m), &keymsg); err != nil {
@@ -236,12 +239,53 @@ func (self *Order) SProcess(msg *sexredis.Msg) {
 		if err := json.Unmarshal(body, &or); err != nil {
 			msg.Err = errors.New("json Unmarshal fails")
 			self.log.Printf("json Unmarshal fails %s", err)
+			self.log.Printf("use ranking_detail of result")
+			stmtOut, err := self.db.Prepare(`SELECT current_order FROM ranking_detail WHERE keyword = ? AND destlink = ?`)
+			defer stmtOut.Close()
+			if err != nil {
+				self.log.Printf("db prepare fails %s", err)
+				msg.Err = errors.New("db prepare fails")
+				return
+			}
+			row := stmtOut.QueryRow(keymsg.Keyword, keymsg.Destlink)
+			order := 50
+			if err := row.Scan(&order); err != nil {
+				self.log.Printf("row scan fails or result is zero")
+			}
+			normsg.COrder = int64(order)
+			normsg.KeyMsg = keymsg
+			msg.Content = normsg
 			return
 		}
 		if or.State == int64(1) {
 			break
 		}
 		time.Sleep(3000 * time.Millisecond)
+		//如果连续5次没有从api取到结果
+		//那么从ranking_detail表取结果
+		//如果ranking_detail表仍然没有取到结果
+		//使用一个缺省的排名和指数order = 50 index = 200
+		//等待次日任务运行时从api获取最新数据
+		if count += 1; count >= 5 {
+			self.log.Printf("use ranking_detail of result")
+			stmtOut, err := self.db.Prepare(`SELECT current_order FROM ranking_detail WHERE keyword = ? AND destlink = ?`)
+			defer stmtOut.Close()
+			if err != nil {
+				self.log.Printf("db prepare fails %s", err)
+				msg.Err = errors.New("db prepare fails")
+				return
+			}
+			row := stmtOut.QueryRow(keymsg.Keyword, keymsg.Destlink)
+			order := 50
+			if err := row.Scan(&order); err != nil {
+				self.log.Printf("row scan fails or result is zero")
+			}
+			normsg.COrder = int64(order)
+			normsg.KeyMsg = keymsg
+			msg.Content = normsg
+			return
+		}
+
 	}
 	cos := strings.Split(or.Data.Sort, ",")
 	co, err := strconv.ParseInt(cos[0], 10, 64)
@@ -262,7 +306,8 @@ func (self *Order) SProcess(msg *sexredis.Msg) {
 func (self *Index) SProcess(msg *sexredis.Msg) {
 	self.log.Printf("get index .....")
 	var (
-		ir IndexResult
+		ir    IndexResult
+		count int
 	)
 	//msg type ok?
 	m := msg.Content.(NormMsg)
@@ -289,12 +334,50 @@ func (self *Index) SProcess(msg *sexredis.Msg) {
 		if err := json.Unmarshal(body, &ir); err != nil {
 			msg.Err = errors.New("json Unmarshal fails")
 			self.log.Printf("json Unmarshal fails %s", err)
+			self.log.Printf("use ranking_detail of result")
+			stmtOut, err := self.db.Prepare(`SELECT current_index FROM ranking_detail WHERE keyword = ? AND destlink = ?`)
+			defer stmtOut.Close()
+			if err != nil {
+				self.log.Printf("db prepare fails %s", err)
+				msg.Err = errors.New("db prepare fails")
+				return
+			}
+			row := stmtOut.QueryRow(m.KeyMsg.Keyword, m.KeyMsg.Destlink)
+			index := 200
+			if err := row.Scan(&index); err != nil {
+				self.log.Printf("row scan fails or result is zero")
+			}
+			m.CIndex = int64(index)
+			msg.Content = m
 			return
 		}
 		if ir.State == 1 {
 			break
 		}
 		time.Sleep(3000 * time.Millisecond)
+		//如果连续5次没有从api取到结果
+		//那么从ranking_detail表取结果
+		//如果ranking_detail表仍然没有取到结果
+		//使用一个缺省的排名和指数order = 50 index = 200
+		//等待次日任务运行时从api获取最新数据
+		if count += 1; count >= 5 {
+			self.log.Printf("use ranking_detail of result")
+			stmtOut, err := self.db.Prepare(`SELECT current_index FROM ranking_detail WHERE keyword = ? AND destlink = ?`)
+			defer stmtOut.Close()
+			if err != nil {
+				self.log.Printf("db prepare fails %s", err)
+				msg.Err = errors.New("db prepare fails")
+				return
+			}
+			row := stmtOut.QueryRow(m.KeyMsg.Keyword, m.KeyMsg.Destlink)
+			index := 200
+			if err := row.Scan(&index); err != nil {
+				self.log.Printf("row scan fails or result is zero")
+			}
+			m.CIndex = int64(index)
+			msg.Content = m
+			return
+		}
 	}
 	self.log.Printf("%+v", ir)
 	if m.HIndex == 0 {

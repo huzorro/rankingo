@@ -239,7 +239,7 @@ func main() {
 		queue := sexredis.New()
 		queue.SetRClient(RANKING_KEYWORD_QUEUE, rc)
 		logger.Printf("key handler start.....")
-		queue.Worker(5, true, &VerifyKey{&cfg, logger, db}, &Order{&cfg, logger, redisPool}, &Index{&cfg, logger, redisPool},
+		queue.Worker(5, true, &VerifyKey{&cfg, logger, db}, &Order{&cfg, logger, redisPool, db}, &Index{&cfg, logger, redisPool, db},
 			&Payment{&cfg, logger, db}, &NormCreate{&cfg, logger, db},
 			&PutInTask{&cfg, logger, redisPool}, &Recoder{&cfg, logger, db}, &OrderLog{&cfg, logger, db})
 	}
