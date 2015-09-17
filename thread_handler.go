@@ -40,8 +40,8 @@ func (self *Control) SProcess(msg *sexredis.Msg) {
 	}
 	//随机种子
 	r := rand.New(rand.NewSource(time.Now().UnixNano()))
-	radio := r.Int63n(2)
-	rankParams := [2][]string{self.c.RankParam, self.c.RankMobileParam}
+	radio := r.Int63n(7)
+	rankParams := [7][]string{self.c.RankParam, self.c.RankMobileParam, self.c.RankParam, self.c.RankParam, self.c.RankParam, self.c.RankParam, self.c.RankParam}
 	var cmd *exec.Cmd
 	switch true {
 	case self.c.RankMix:
