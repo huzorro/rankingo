@@ -489,6 +489,20 @@ func (self *NormCreate) SProcess(msg *sexredis.Msg) {
 	for k, v := range nt {
 		m.Hour[fmt.Sprint(k)] = int64(math.Floor(float64(m.CIndex) * (float64(ratio) / float64(100)) * v))
 	}
+
+	if m.CIndex <= 500 {
+		ratio = r.Int63n(10-4) + 4
+		for i := 0; i < int(ratio); i++ {
+			ratioH := r.Int63n(22-8) + 8
+			m.Hour[fmt.Sprint(ratioH)] += 1
+		}
+	} else if m.CIndex <= 1000 {
+		ratio = r.Int63n(30-20) + 20
+		for i := 0; i < int(ratio); i++ {
+			ratioH := r.Int63n(22-8) + 8
+			m.Hour[fmt.Sprint(ratioH)] += 1
+		}
+	}
 	msg.Content = m
 }
 
